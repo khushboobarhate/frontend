@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <title>Setu Moolya (सेतुमूल्य) | AgriTech Value Chain & B2B Escrow Platform</title>
+  <meta name="description" content="Setu Moolya - Every Root Deserves Its Worth. Transparent AgriTech platform connecting rural wild-herb foragers, farmers and FPOs directly with verified global B2B buyers." />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/jpeg" href="assets/Logo.jpg" />
+  <link rel="apple-touch-icon" href="assets/Logo.jpg" />
+
+  <!-- Google Fonts: Plus Jakarta Sans, Inter, Noto Sans Devanagari -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+
+  <!-- Font Awesome Icons 6.5.1 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Fullscreen Green Farm Background Layer -->
+  <div class="farm-background" id="farmBackground">
+    <div class="bg-overlay"></div>
+    <div class="floating-spores" id="floatingSpores" aria-hidden="true"></div>
+  </div>
+
+  <!-- Top Glass Navigation Bar -->
+  <header class="glass-navbar">
+    <div class="nav-container">
+      <div class="nav-brand" id="navBrandHome">
+        <div class="logo-ring">
+          <img src="assets/Logo.jpg" alt="Setu Moolya Logo" class="nav-logo" onerror="this.src='Logo.jpg'" />
+        </div>
+        <div class="nav-brand-text">
+          <span class="brand-title">
+            Setu Moolya <span class="brand-devanagari">(सेतुमूल्य)</span>
+          </span>
+          <span class="brand-tagline">Every Root Deserves Its Worth</span>
+        </div>
+      </div>
+
+      <div class="nav-controls">
+        <!-- Change Farm Scene Button -->
+        <button class="glass-btn btn-sm" id="bgSwitchBtn" type="button" title="Switch between lush green farm landscapes">
+          <i class="fa-solid fa-tree"></i>
+          <span class="btn-hide-mobile">Change Farm Scene</span>
+        </button>
+
+        <!-- Backend Health Status Pill -->
+        <div class="status-indicator" id="backendStatusPill" role="button" tabindex="0" title="Checking backend connection at http://localhost:5000">
+          <span class="status-dot pulsing" id="statusDot"></span>
+          <span class="status-text" id="statusText">Connecting...</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Viewport Container -->
+  <main class="main-container">
+
+    <!-- ============================================================== -->
+    <!-- SECTION 1: AUTHENTICATION CONTAINER (Transparent Glass Card)    -->
+    <!-- ============================================================== -->
+    <section class="auth-section" id="authSection">
+      <div class="glass-card auth-card">
+        
+        <!-- App Logo & Branding Header -->
+        <div class="card-brand-header">
+          <div class="logo-wrapper">
+            <img src="assets/Logo.jpg" alt="Setu Moolya Logo" class="brand-avatar" onerror="this.src='Logo.jpg'" />
+            <div class="logo-glow-ring"></div>
+          </div>
+          <h1 class="brand-heading">
+            Setu Moolya <span class="brand-devanagari-accent">(सेतुमूल्य)</span>
+          </h1>
+          <p class="brand-sub">AgriTech & Rural Herb Direct B2B Value Chain</p>
+          <div class="motto-badge">
+            <i class="fa-solid fa-seedling"></i> FARMER &bull; FAIR VALUE &bull; ESCROW &bull; GROWTH
+          </div>
+        </div>
+
+        <!-- Navigation Tabs: Sign In / Register -->
+        <div class="tab-switcher" role="tablist">
+          <button class="tab-btn active" id="tabLoginBtn" type="button" role="tab" aria-selected="true" aria-controls="loginForm">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            <span>Sign In (लॉग इन)</span>
+          </button>
+          <button class="tab-btn" id="tabRegisterBtn" type="button" role="tab" aria-selected="false" aria-controls="registerSection">
+            <i class="fa-solid fa-user-plus"></i>
+            <span>Register (पंजीकरण)</span>
+          </button>
+        </div>
+
+        <!-- Universal Notification / Alert Banner -->
+        <div class="alert-box hidden" id="alertBox" role="alert">
+          <div class="alert-content">
+            <i class="fa-solid fa-circle-exclamation alert-icon" id="alertIcon"></i>
+            <span class="alert-msg" id="alertMsg"></span>
+          </div>
+          <button class="alert-close" id="alertCloseBtn" type="button" aria-label="Close alert">&times;</button>
+        </div>
+
+        <!-- ========================================================== -->
+        <!-- FORM 1: LOGIN (Farmer, Buyer, Admin)                       -->
+        <!-- ========================================================== -->
+        <form class="auth-form" id="loginForm" autocomplete="on">
+          
+          <!-- Role Selector Bar -->
+          <div class="role-selector-container">
+            <label class="form-label">
+              <i class="fa-solid fa-user-shield"></i> Select Your Role:
+            </label>
+            <div class="role-chips" role="radiogroup">
+              <label class="role-chip active">
+                <input type="radio" name="loginRole" value="farmer" checked />
+                <span class="chip-content">
+                  <i class="fa-solid fa-seedling"></i>
+                  <span class="chip-title">Farmer (किसान)</span>
+                </span>
+              </label>
+
+              <label class="role-chip">
+                <input type="radio" name="loginRole" value="buyer" />
+                <span class="chip-content">
+                  <i class="fa-solid fa-briefcase"></i>
+                  <span class="chip-title">Buyer (व्यापारी)</span>
+                </span>
+              </label>
+
+              <label class="role-chip">
+                <input type="radio" name="loginRole" value="admin" />
+                <span class="chip-content">
+                  <i class="fa-solid fa-shield-halved"></i>
+                  <span class="chip-title">Admin (व्यवस्थापक)</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Dynamic Role Notice / Helper -->
+          <div class="role-hint-banner" id="roleHintBanner">
+            <i class="fa-solid fa-circle-info"></i>
+            <span id="roleHintText">
+              Farmers log in using the system-generated email and password received via SMS/Email after Admin approval.
+            </span>
+          </div>
+
+          <!-- Login ID / Email Input -->
+          <div class="form-group">
+            <label class="form-label" for="loginIdInput" id="loginIdLabel">
+              <i class="fa-solid fa-envelope"></i> Login ID (Email)
+            </label>
+            <div class="input-wrapper">
+              <i class="fa-solid fa-at input-icon"></i>
+              <input 
+                type="text" 
+                id="loginIdInput" 
+                class="glass-input" 
+                placeholder="e.g. ramesh123456@setumoolya.com" 
+                required 
+                autocomplete="username" 
+              />
+            </div>
+          </div>
+
+          <!-- Password Input with Show/Hide Toggle -->
+          <div class="form-group">
+            <div class="label-row">
+              <label class="form-label" for="loginPasswordInput">
+                <i class="fa-solid fa-lock"></i> Password
+              </label>
+              <button type="button" class="link-btn" id="forgotPasswordLink">
+                Forgot password?
+              </button>
+            </div>
+            <div class="input-wrapper">
+              <i class="fa-solid fa-key input-icon"></i>
+              <input 
+                type="password" 
+                id="loginPasswordInput" 
+                class="glass-input" 
+                placeholder="Enter your password" 
+                required 
+                autocomplete="current-password" 
+              />
+              <button type="button" class="toggle-password" id="toggleLoginPassword" aria-label="Toggle password visibility">
+                <i class="fa-solid fa-eye" id="eyeIconLogin"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Remember Me Checkbox -->
+          <div class="form-options">
+            <label class="checkbox-label">
+              <input type="checkbox" id="rememberMe" checked />
+              <span class="custom-checkbox"><i class="fa-solid fa-check"></i></span>
+              <span class="checkbox-text">Keep me logged in</span>
+            </label>
+          </div>
+
+          <!-- Login Submit Button -->
+          <button type="submit" class="submit-btn primary-btn" id="loginSubmitBtn">
+            <span class="btn-text">
+              <i class="fa-solid fa-right-to-bracket"></i> Sign In to Setu Moolya
+            </span>
+            <span class="btn-loader hidden">
+              <i class="fa-solid fa-circle-notch fa-spin"></i> Authenticating...
+            </span>
+          </button>
+
+          <!-- Quick Fast Demo Fill Credentials (For Easy Testing) -->
+          <div class="quick-credentials">
+            <span class="quick-label">
+              <i class="fa-solid fa-bolt"></i> Fast Demo Autofill:
+            </span>
+            <div class="quick-buttons">
+              <button type="button" class="quick-pill" onclick="quickFill('farmer')" title="Autofill Farmer credentials">
+                <i class="fa-solid fa-seedling"></i> Farmer Demo
+              </button>
+              <button type="button" class="quick-pill" onclick="quickFill('buyer')" title="Autofill Buyer credentials">
+                <i class="fa-solid fa-briefcase"></i> Buyer Demo
+              </button>
+              <button type="button" class="quick-pill" onclick="quickFill('admin')" title="Autofill Admin credentials">
+                <i class="fa-solid fa-shield-halved"></i> Admin Demo
+              </button>
+            </div>
+          </div>
+
+        </form>
+
+        <!-- ========================================================== -->
+        <!-- SECTION 2: REGISTRATION (Farmer / Buyer With OTP & Photo)  -->
+        <!-- ========================================================== -->
+        <div class="auth-form hidden" id="registerSection">
+          
+          <!-- Registration Role Selection -->
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fa-solid fa-id-card-clip"></i> Register As:
+            </label>
+            <div class="reg-role-selector">
+              <button type="button" class="reg-role-btn active" id="regRoleFarmerBtn" data-role="farmer">
+                <i class="fa-solid fa-seedling"></i>
+                <div class="reg-role-text">
+                  <strong>Farmer / Cultivator</strong>
+                  <small>किसान / जड़ी-बूटी संग्राहक</small>
+                </div>
+              </button>
+              <button type="button" class="reg-role-btn" id="regRoleBuyerBtn" data-role="buyer">
+                <i class="fa-solid fa-building-wheat"></i>
+                <div class="reg-role-text">
+                  <strong>B2B Herb Buyer</strong>
+                  <small>व्यापारी / फार्मास्युटिकल खरीदार</small>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- 2-Step Progress Indicator -->
+          <div class="step-progress-bar">
+            <div class="step-node active" id="stepNode1">
+              <span class="step-number">1</span>
+              <span class="step-label">Mobile OTP</span>
+            </div>
+            <div class="step-line" id="stepLine"></div>
+            <div class="step-node" id="stepNode2">
+              <span class="step-number">2</span>
+              <span class="step-label">Details & Photo</span>
+            </div>
+          </div>
+
+          <!-- -------------------------------------------------------- -->
+          <!-- STEP 1: MOBILE & OTP VERIFICATION                        -->
+          <!-- -------------------------------------------------------- -->
+          <div class="step-panel" id="stepPanel1">
+            <div class="step-header">
+              <h3><i class="fa-solid fa-mobile-screen"></i> Step 1: Mobile Number Verification</h3>
+              <p>Verify your phone number with a 6-digit OTP before submitting registration.</p>
+            </div>
+
+            <!-- Mobile Number Input -->
+            <div class="form-group">
+              <label class="form-label" for="regPhoneInput">
+                <i class="fa-solid fa-phone"></i> Mobile Number (with +91) *
+              </label>
+              <div class="input-wrapper input-with-action">
+                <i class="fa-solid fa-phone input-icon"></i>
+                <input 
+                  type="tel" 
+                  id="regPhoneInput" 
+                  class="glass-input" 
+                  placeholder="+919876543210" 
+                  value="+919876543210" 
+                  required 
+                  inputmode="tel" 
+                />
+                <button type="button" class="input-action-btn" id="sendOtpBtn">
+                  <span class="btn-text"><i class="fa-solid fa-paper-plane"></i> Send OTP</span>
+                  <span class="btn-loader hidden"><i class="fa-solid fa-circle-notch fa-spin"></i></span>
+                </button>
+              </div>
+              <small class="field-hint">Must include country code, e.g., <code>+919876543210</code></small>
+            </div>
+
+            <!-- Dev OTP Notice (Appears when dev provider returns OTP) -->
+            <div class="dev-otp-pill hidden" id="devOtpBox">
+              <div class="dev-otp-header">
+                <i class="fa-solid fa-code"></i>
+                <span>Development Mode OTP: <strong id="devOtpValue">------</strong></span>
+              </div>
+              <button type="button" class="quick-pill btn-xs" id="devOtpAutoFillBtn">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Fill OTP
+              </button>
+            </div>
+
+            <!-- OTP Input Box & Countdown -->
+            <div class="otp-verification-container hidden" id="otpInputArea">
+              <div class="form-group">
+                <label class="form-label" for="otpCodeInput">
+                  <i class="fa-solid fa-shield"></i> Enter 6-Digit OTP Code *
+                </label>
+                <div class="input-wrapper">
+                  <i class="fa-solid fa-key input-icon"></i>
+                  <input 
+                    type="text" 
+                    id="otpCodeInput" 
+                    class="glass-input otp-code-input" 
+                    placeholder="123456" 
+                    maxlength="6" 
+                    inputmode="numeric" 
+                    pattern="[0-9]*" 
+                  />
+                </div>
+              </div>
+
+              <div class="otp-actions-row">
+                <div class="otp-timer" id="otpTimerText">
+                  <i class="fa-regular fa-clock"></i> Valid for: <span id="timerCountdown">10:00</span>
+                </div>
+                <button type="button" class="link-btn" id="resendOtpBtn" disabled>
+                  Resend OTP
+                </button>
+              </div>
+
+              <!-- Verify OTP Button -->
+              <button type="button" class="submit-btn primary-btn" id="verifyOtpBtn">
+                <span class="btn-text">
+                  <i class="fa-solid fa-circle-check"></i> Verify OTP & Continue
+                </span>
+                <span class="btn-loader hidden">
+                  <i class="fa-solid fa-circle-notch fa-spin"></i> Verifying...
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <!-- -------------------------------------------------------- -->
+          <!-- STEP 2: PROFILE DETAILS & PASSPORT PHOTOGRAPH            -->
+          <!-- -------------------------------------------------------- -->
+          <div class="step-panel hidden" id="stepPanel2">
+            
+            <!-- Verified Mobile Banner -->
+            <div class="verified-phone-badge">
+              <i class="fa-solid fa-circle-check"></i>
+              <span>Mobile Verified: <strong id="verifiedPhoneDisplay">+919876543210</strong></span>
+              <button type="button" class="btn-xs-link" id="changePhoneBtn">Change</button>
+            </div>
+
+            <!-- Form: KYC & Details -->
+            <form id="step2DetailsForm" enctype="multipart/form-data">
+
+              <!-- Row 1: Full Name & Age -->
+              <div class="grid-2">
+                <div class="form-group">
+                  <label class="form-label" for="regFullName">
+                    <i class="fa-solid fa-user"></i> Full Name *
+                  </label>
+                  <div class="input-wrapper">
+                    <i class="fa-solid fa-signature input-icon"></i>
+                    <input 
+                      type="text" 
+                      id="regFullName" 
+                      class="glass-input" 
+                      placeholder="e.g. Ramesh Kumar Patil" 
+                      required 
+                    />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="regAge">
+                    <i class="fa-solid fa-calendar-days"></i> Age *
+                  </label>
+                  <div class="input-wrapper">
+                    <i class="fa-solid fa-hashtag input-icon"></i>
+                    <input 
+                      type="number" 
+                      id="regAge" 
+                      class="glass-input" 
+                      placeholder="38" 
+                      min="18" 
+                      max="100" 
+                      required 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Row 2: Nationality & Preferred Language -->
+              <div class="grid-2">
+                <div class="form-group">
+                  <label class="form-label" for="regNationality">
+                    <i class="fa-solid fa-flag"></i> Nationality *
+                  </label>
+                  <div class="input-wrapper">
+                    <i class="fa-solid fa-globe input-icon"></i>
+                    <input 
+                      type="text" 
+                      id="regNationality" 
+                      class="glass-input" 
+                      value="Indian" 
+                      required 
+                    />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="regLanguage">
+                    <i class="fa-solid fa-language"></i> Preferred Language *
+                  </label>
+                  <div class="input-wrapper">
+                    <i class="fa-solid fa-comments input-icon"></i>
+                    <select id="regLanguage" class="glass-select" required>
+                      <option value="en">English</option>
+                      <option value="hi" selected>Hindi (हिन्दी)</option>
+                      <option value="mr">Marathi (मराठी)</option>
+                      <option value="gu">Gujarati (ગુજરાતી)</option>
+                      <option value="ta">Tamil (தமிழ்)</option>
+                      <option value="te">Telugu (తెలుగు)</option>
+                      <option value="kn">Kannada (ಕನ್ನಡ)</option>
+                      <option value="bn">Bengali (বাংলা)</option>
+                      <option value="pa">Punjabi (ਪੰਜਾਬੀ)</option>
+                      <option value="ml">Malayalam (മലയാളം)</option>
+                      <option value="or">Odia (ଓଡ଼ିଆ)</option>
+                      <option value="ur">Urdu (اردو)</option>
+                      <option value="as">Assamese (অসমীয়া)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Row 3: State, Taluka, City -->
+              <div class="grid-3">
+                <div class="form-group">
+                  <label class="form-label" for="regState">
+                    <i class="fa-solid fa-map"></i> State *
+                  </label>
+                  <div class="input-wrapper">
+                    <i class="fa-solid fa-location-dot input-icon"></i>
+                    <input 
+                      type="text" 
+                      id="regState" 
+                      class="glass-input" 
+                      placeholder="e.g. Maharashtra" 
+                      required 
+                    />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="regTaluka">
+                    <i class="fa-solid fa-map-pin"></i> Taluka / Tehsil *
+                  </label>
+                  <div class="input-wrapper">
+                    <i class="fa-solid fa-map-pin input-icon"></i>
+                    <input 
+                      type="text" 
+                      id="regTaluka" 
+                      class="glass-input" 
+                      placeholder="e.g. Nashik" 
+                      required 
+                    />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="regCity">
+                    <i class="fa-solid fa-city"></i> City / District *
+                  </label>
+                  <div class="input-wrapper">
+                    <i class="fa-solid fa-city input-icon"></i>
+                    <input 
+                      type="text" 
+                      id="regCity" 
+                      class="glass-input" 
+                      placeholder="e.g. Nashik" 
+                      required 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Row 4: Full Residential Address -->
+              <div class="form-group">
+                <label class="form-label" for="regAddress">
+                  <i class="fa-solid fa-house"></i> Full Residential Address *
+                </label>
+                <div class="input-wrapper">
+                  <i class="fa-solid fa-address-card input-icon textarea-icon"></i>
+                  <textarea 
+                    id="regAddress" 
+                    class="glass-textarea" 
+                    rows="2" 
+                    placeholder="Village Pimpalgaon, Taluka Nashik, Maharashtra - 422003" 
+                    required
+                  ></textarea>
+                </div>
+              </div>
+
+              <!-- Row 5: Land Location (Farmer-Only Field) -->
+              <div class="form-group" id="landLocationGroup">
+                <label class="form-label" for="regLandLocation">
+                  <i class="fa-solid fa-wheat-awn"></i> Land / Cultivation Location (Survey No.) *
+                </label>
+                <div class="input-wrapper">
+                  <i class="fa-solid fa-compass input-icon"></i>
+                  <input 
+                    type="text" 
+                    id="regLandLocation" 
+                    class="glass-input" 
+                    placeholder="e.g. Survey No. 45, Pimpalgaon, Nashik" 
+                  />
+                </div>
+                <small class="field-hint">Required for Farmer accounts to verify land record & herb origin.</small>
+              </div>
+
+              <!-- Row 6: Passport Photograph Upload (Required by Backend) -->
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="fa-solid fa-camera"></i> Passport-Size Photograph *
+                </label>
+                <div class="photo-upload-zone" id="photoDropZone">
+                  <input 
+                    type="file" 
+                    id="regPhotoInput" 
+                    accept="image/jpeg,image/png,image/webp" 
+                    class="file-input-hidden" 
+                    required 
+                  />
+                  <div class="upload-placeholder" id="uploadPlaceholder">
+                    <div class="upload-icon-circle">
+                      <i class="fa-solid fa-cloud-arrow-up"></i>
+                    </div>
+                    <span class="upload-title">Click to upload or drag & drop</span>
+                    <span class="upload-sub">JPEG, PNG or WEBP (Max size: 5 MB)</span>
+                  </div>
+                  <div class="photo-preview-container hidden" id="photoPreviewContainer">
+                    <img id="photoPreviewImg" alt="Passport Photo Preview" class="photo-preview-img" />
+                    <div class="photo-preview-meta">
+                      <span id="photoPreviewName" class="preview-name">photo.jpg</span>
+                      <button type="button" class="glass-btn btn-xs danger-btn" id="removePhotoBtn">
+                        <i class="fa-solid fa-trash"></i> Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Fast Test Fill Pill for Registration -->
+              <div class="quick-credentials">
+                <span class="quick-label">Fast Demo Fill:</span>
+                <button type="button" class="quick-pill btn-xs" id="quickFillRegBtn">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> Populate Sample Data
+                </button>
+              </div>
+
+              <!-- Final Submit Registration Button -->
+              <button type="submit" class="submit-btn primary-btn" id="regSubmitBtn">
+                <span class="btn-text">
+                  <i class="fa-solid fa-paper-plane"></i> Submit Registration for Approval
+                </span>
+                <span class="btn-loader hidden">
+                  <i class="fa-solid fa-circle-notch fa-spin"></i> Submitting Request...
+                </span>
+              </button>
+
+              <div class="admin-review-notice">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span>Your application will be sent to the Admin Portal and verified within 24 hours. Your login credentials will be delivered to your registered contact.</span>
+              </div>
+
+            </form>
+          </div>
+
+          <!-- -------------------------------------------------------- -->
+          <!-- REGISTRATION SUCCESS CONFIRMATION MODAL                  -->
+          <!-- -------------------------------------------------------- -->
+          <div class="reg-success-panel hidden" id="regSuccessPanel">
+            <div class="success-icon-badge">
+              <i class="fa-solid fa-check"></i>
+            </div>
+            <h2 class="success-title">Application Submitted Successfully!</h2>
+            <p class="success-desc" id="successDescMessage">
+              Your registration request has been sent to the Admin Portal. It will be verified within 24 hours.
+            </p>
+            <div class="ticket-card">
+              <div class="ticket-row">
+                <span class="ticket-label">Applicant Name:</span>
+                <strong id="ticketName">Ramesh Kumar Patil</strong>
+              </div>
+              <div class="ticket-row">
+                <span class="ticket-label">Account Role:</span>
+                <span class="role-pill-badge" id="ticketRole">Farmer</span>
+              </div>
+              <div class="ticket-row">
+                <span class="ticket-label">Request ID:</span>
+                <code class="ticket-id" id="ticketId">req-xxxx-xxxx</code>
+              </div>
+              <div class="ticket-row">
+                <span class="ticket-label">Status:</span>
+                <span class="status-pill-pending">
+                  <i class="fa-solid fa-hourglass-half"></i> Pending Admin Approval
+                </span>
+              </div>
+            </div>
+            <button type="button" class="glass-btn primary-btn btn-block" id="successToLoginBtn">
+              <i class="fa-solid fa-arrow-right-to-bracket"></i> Return to Sign In
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- SECTION 3: AUTHENTICATED PORTALS (Farmer, Buyer, Admin)        -->
+    <!-- ============================================================== -->
+    <section class="dashboard-section hidden" id="dashboardSection">
+      <div class="glass-card dashboard-card">
+
+        <!-- Dashboard Top Header Bar -->
+        <header class="dash-header">
+          <div class="user-profile-header">
+            <div class="avatar-ring">
+              <img src="assets/Logo.jpg" alt="User Avatar" class="user-avatar-img" id="dashUserAvatar" onerror="this.src='Logo.jpg'" />
+            </div>
+            <div class="user-info-text">
+              <div class="user-name-row">
+                <h2 class="dash-user-name" id="dashUserName">User Name</h2>
+                <span class="dash-role-badge" id="dashRoleBadge">Farmer</span>
+                <span class="dash-status-badge verified" id="dashStatusBadge">
+                  <i class="fa-solid fa-circle-check"></i> Approved
+                </span>
+              </div>
+              <p class="dash-user-sub" id="dashUserSub">
+                <span id="dashUserLocation"><i class="fa-solid fa-location-dot"></i> Maharashtra, India</span> &bull; 
+                <span id="dashUserEmail">user@setumoolya.com</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="dash-actions">
+            <button class="glass-btn btn-sm" id="dashRefreshBtn" title="Refresh Dashboard Data">
+              <i class="fa-solid fa-rotate"></i>
+              <span>Refresh</span>
+            </button>
+            <button class="glass-btn btn-sm danger-btn" id="logoutBtn" title="Sign Out of Portal">
+              <i class="fa-solid fa-arrow-right-from-bracket"></i>
+              <span>Sign Out</span>
+            </button>
+          </div>
+        </header>
+
+        <!-- ---------------------------------------------------------- -->
+        <!-- VIEW A: FARMER DASHBOARD                                    -->
+        <!-- ---------------------------------------------------------- -->
+        <div class="portal-view hidden" id="farmerPortalView">
+          
+          <!-- Key Farmer Metrics -->
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-icon green-glow"><i class="fa-solid fa-seedling"></i></div>
+              <div class="metric-info">
+                <span class="metric-value">1,450 kg</span>
+                <span class="metric-label">Approved Bio-Harvest Quota</span>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon gold-glow"><i class="fa-solid fa-coins"></i></div>
+              <div class="metric-info">
+                <span class="metric-value">₹ 1,84,200</span>
+                <span class="metric-label">Escrow Value Settled</span>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon blue-glow"><i class="fa-solid fa-flask"></i></div>
+              <div class="metric-info">
+                <span class="metric-value">Grade A (HPLC)</span>
+                <span class="metric-label">AYUSH Purity Index</span>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon purple-glow"><i class="fa-solid fa-truck-fast"></i></div>
+              <div class="metric-info">
+                <span class="metric-value">3 Batches</span>
+                <span class="metric-label">In Cold-Chain Transit</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Farmer Profile Detail Card -->
+          <div class="dash-panel">
+            <div class="panel-header">
+              <h3><i class="fa-solid fa-id-card"></i> Verified Farmer Profile Details</h3>
+              <span class="panel-badge"><i class="fa-solid fa-check"></i> Supabase Auth Linked</span>
+            </div>
+            <div class="profile-details-grid">
+              <div class="detail-item">
+                <span class="detail-label">Full Name</span>
+                <strong class="detail-val" id="farmerValName">-</strong>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Mobile Number</span>
+                <strong class="detail-val" id="farmerValPhone">-</strong>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Land Survey Location</span>
+                <strong class="detail-val" id="farmerValLand">-</strong>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Taluka & City</span>
+                <strong class="detail-val" id="farmerValCity">-</strong>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">State / Region</span>
+                <strong class="detail-val" id="farmerValState">-</strong>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Preferred Language</span>
+                <strong class="detail-val" id="farmerValLang">-</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fair Price Index (सेतुमूल्य औषधीय भाव) -->
+          <div class="dash-panel">
+            <div class="panel-header">
+              <h3><i class="fa-solid fa-chart-line"></i> Fair Herbal Market Pricing Index (सेतुमूल्य औषधीय भाव)</h3>
+              <span class="panel-tag"><i class="fa-solid fa-scale-balanced"></i> Escrow Protected Rate</span>
+            </div>
+            <div class="table-responsive">
+              <table class="glass-table">
+                <thead>
+                  <tr>
+                    <th>Herb Species</th>
+                    <th>Botanical Name</th>
+                    <th>Standard Grade</th>
+                    <th>Min Floor Price</th>
+                    <th>Active Mandi Rate</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Kutki (कुटकी)</strong></td>
+                    <td><em>Picrorhiza kurroa</em></td>
+                    <td><span class="badge badge-emerald">Grade A (Picroside &gt; 4.5%)</span></td>
+                    <td>₹ 1,850 / kg</td>
+                    <td class="text-success"><strong>₹ 2,120 / kg</strong></td>
+                    <td><button class="glass-btn btn-xs">List Batch</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Ashwagandha (अश्वगंधा)</strong></td>
+                    <td><em>Withania somnifera</em></td>
+                    <td><span class="badge badge-emerald">Nagori Grade</span></td>
+                    <td>₹ 380 / kg</td>
+                    <td class="text-success"><strong>₹ 440 / kg</strong></td>
+                    <td><button class="glass-btn btn-xs">List Batch</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Shatavari (शतावरी)</strong></td>
+                    <td><em>Asparagus racemosus</em></td>
+                    <td><span class="badge badge-gold">Grade A Roots</span></td>
+                    <td>₹ 520 / kg</td>
+                    <td class="text-success"><strong>₹ 590 / kg</strong></td>
+                    <td><button class="glass-btn btn-xs">List Batch</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Shilajit Raw (शिलाजीत)</strong></td>
+                    <td><em>Asphaltum punjabianum</em></td>
+                    <td><span class="badge badge-purple">High Altitude Wild</span></td>
+                    <td>₹ 4,200 / kg</td>
+                    <td class="text-success"><strong>₹ 4,650 / kg</strong></td>
+                    <td><button class="glass-btn btn-xs">List Batch</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ---------------------------------------------------------- -->
+        <!-- VIEW B: BUYER DASHBOARD                                     -->
+        <!-- ---------------------------------------------------------- -->
+        <div class="portal-view hidden" id="buyerPortalView">
+          
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-icon gold-glow"><i class="fa-solid fa-wallet"></i></div>
+              <div class="metric-info">
+                <span class="metric-value">₹ 14,50,000</span>
+                <span class="metric-label">Escrow Locked Funds</span>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon green-glow"><i class="fa-solid fa-boxes-packing"></i></div>
+              <div class="metric-info">
+                <span class="metric-value">8 Batches</span>
+                <span class="metric-label">Active Herbal Orders</span>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon blue-glow"><i class="fa-solid fa-file-shield"></i></div>
+              <div class="metric-info">
+                <span class="metric-value">100% NABL</span>
+                <span class="metric-label">Certified Batch Purity</span>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon purple-glow"><i class="fa-solid fa-truck-ramp-box"></i></div>
+              <div class="metric-info">
+                <span class="metric-value">Verified</span>
+                <span class="metric-label">B2B Buyer Accreditation</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="dash-panel">
+            <div class="panel-header">
+              <h3><i class="fa-solid fa-store"></i> Verified Wild-Harvest Herb Catalog</h3>
+              <span class="panel-tag">Direct From Verified Farmers</span>
+            </div>
+            <div class="catalog-grid">
+              <div class="catalog-item">
+                <div class="catalog-header">
+                  <span class="lot-tag">LOT #SM-9021</span>
+                  <span class="badge badge-emerald">HPLC Certified</span>
+                </div>
+                <h4>Wild Organic Kutki Roots</h4>
+                <p class="catalog-origin"><i class="fa-solid fa-location-dot"></i> Joshimath, Chamoli (Uttarakhand)</p>
+                <div class="catalog-pricing">
+                  <span class="catalog-price">₹ 2,120 <small>/ kg</small></span>
+                  <span class="catalog-qty">Available: 250 kg</span>
+                </div>
+                <button class="glass-btn primary-btn btn-sm btn-block">
+                  <i class="fa-solid fa-cart-shopping"></i> Order Lab Sample
+                </button>
+              </div>
+
+              <div class="catalog-item">
+                <div class="catalog-header">
+                  <span class="lot-tag">LOT #SM-9028</span>
+                  <span class="badge badge-emerald">AYUSH Standard</span>
+                </div>
+                <h4>Sun-Dried Nagori Ashwagandha</h4>
+                <p class="catalog-origin"><i class="fa-solid fa-location-dot"></i> Nashik, Maharashtra</p>
+                <div class="catalog-pricing">
+                  <span class="catalog-price">₹ 440 <small>/ kg</small></span>
+                  <span class="catalog-qty">Available: 800 kg</span>
+                </div>
+                <button class="glass-btn primary-btn btn-sm btn-block">
+                  <i class="fa-solid fa-cart-shopping"></i> Order Lab Sample
+                </button>
+              </div>
+
+              <div class="catalog-item">
+                <div class="catalog-header">
+                  <span class="lot-tag">LOT #SM-9034</span>
+                  <span class="badge badge-gold">High Potency</span>
+                </div>
+                <h4>Organic White Shatavari Roots</h4>
+                <p class="catalog-origin"><i class="fa-solid fa-location-dot"></i> Mandla, Madhya Pradesh</p>
+                <div class="catalog-pricing">
+                  <span class="catalog-price">₹ 590 <small>/ kg</small></span>
+                  <span class="catalog-qty">Available: 420 kg</span>
+                </div>
+                <button class="glass-btn primary-btn btn-sm btn-block">
+                  <i class="fa-solid fa-cart-shopping"></i> Order Lab Sample
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ---------------------------------------------------------- -->
+        <!-- VIEW C: ADMIN PORTAL & REGISTRATION APPROVAL DASHBOARD      -->
+        <!-- ---------------------------------------------------------- -->
+        <div class="portal-view hidden" id="adminPortalView">
+          
+          <!-- Admin Metrics -->
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-icon gold-glow"><i class="fa-solid fa-hourglass-half"></i></div>
+              <div class="metric-info">
+                <span class="metric-value" id="adminPendingCount">0</span>
+                <span class="metric-label">Pending Approval Requests</span>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon green-glow"><i class="fa-solid fa-users"></i></div>
+              <div class="metric-info">
+                <span class="metric-value" id="adminFarmersCount">0</span>
+                <span class="metric-label">Approved Farmers</span>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon blue-glow"><i class="fa-solid fa-building-user"></i></div>
+              <div class="metric-info">
+                <span class="metric-value" id="adminBuyersCount">0</span>
+                <span class="metric-label">Approved B2B Buyers</span>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon purple-glow"><i class="fa-solid fa-shield-halved"></i></div>
+              <div class="metric-info">
+                <span class="metric-value">Active</span>
+                <span class="metric-label">Supabase Guard Active</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pending Requests Management Section -->
+          <div class="dash-panel">
+            <div class="panel-header-row">
+              <div>
+                <h3><i class="fa-solid fa-user-check"></i> Registration Approval Queue (आवेदन सत्यापन)</h3>
+                <p class="panel-sub">Review applicant photos, mobile verification, and approve or reject access.</p>
+              </div>
+
+              <!-- Filter Buttons -->
+              <div class="filter-btn-group">
+                <button type="button" class="filter-pill active" data-filter="all">All Requests</button>
+                <button type="button" class="filter-pill" data-filter="farmer"><i class="fa-solid fa-seedling"></i> Farmers</button>
+                <button type="button" class="filter-pill" data-filter="buyer"><i class="fa-solid fa-briefcase"></i> Buyers</button>
+              </div>
+            </div>
+
+            <!-- Pending Requests Cards Container -->
+            <div class="requests-queue-container" id="adminRequestsQueue">
+              <div class="empty-state" id="adminEmptyState">
+                <i class="fa-solid fa-circle-check empty-icon"></i>
+                <h4>No Pending Requests</h4>
+                <p>All farmer and buyer registration applications have been reviewed!</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Approved Users Directory -->
+          <div class="dash-panel">
+            <div class="panel-header-row">
+              <div>
+                <h3><i class="fa-solid fa-users-viewfinder"></i> Approved Platform Users Directory</h3>
+                <p class="panel-sub">Active platform participants with generated login credentials.</p>
+              </div>
+              <div class="filter-btn-group">
+                <button type="button" class="filter-pill active" id="btnListFarmers">Farmers</button>
+                <button type="button" class="filter-pill" id="btnListBuyers">Buyers</button>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="glass-table">
+                <thead>
+                  <tr>
+                    <th>Photo</th>
+                    <th>Full Name</th>
+                    <th>Role</th>
+                    <th>Login ID</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="approvedUsersTableBody">
+                  <tr>
+                    <td colspan="6" class="text-center text-muted">Click Refresh to fetch approved users from backend.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: FORGOT PASSWORD                                         -->
+  <!-- ============================================================== -->
+  <div class="modal-backdrop hidden" id="forgotModal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-key"></i> Reset Your Password</h3>
+        <button type="button" class="modal-close" id="closeForgotModal">&times;</button>
+      </div>
+      <p class="modal-sub">
+        Enter your registered email address and we'll send you secure instructions to reset your password.
+      </p>
+      <form id="forgotForm">
+        <div class="form-group">
+          <label class="form-label" for="forgotEmail">Email Address</label>
+          <div class="input-wrapper">
+            <i class="fa-solid fa-envelope input-icon"></i>
+            <input type="email" id="forgotEmail" class="glass-input" placeholder="e.g. name@setumoolya.com" required />
+          </div>
+        </div>
+        <button type="submit" class="submit-btn primary-btn btn-block">
+          <i class="fa-solid fa-paper-plane"></i> Send Password Reset Link
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: ADMIN CREDENTIALS DISPLAY (On Approval)                 -->
+  <!-- ============================================================== -->
+  <div class="modal-backdrop hidden" id="credentialsModal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-circle-check text-success"></i> Registration Approved!</h3>
+        <button type="button" class="modal-close" id="closeCredentialsModal">&times;</button>
+      </div>
+      <p class="modal-sub">
+        The user account has been created in Supabase Auth. The credentials below have also been dispatched to the applicant.
+      </p>
+      <div class="credentials-card">
+        <div class="cred-row">
+          <span class="cred-label">User Name:</span>
+          <strong id="credModalName">-</strong>
+        </div>
+        <div class="cred-row">
+          <span class="cred-label">Assigned Role:</span>
+          <span class="role-pill-badge" id="credModalRole">Farmer</span>
+        </div>
+        <div class="cred-row highlight">
+          <span class="cred-label">Login ID:</span>
+          <code id="credModalEmail">username123456@setumoolya.com</code>
+          <button type="button" class="copy-btn" onclick="copyToClipboard('credModalEmail')">
+            <i class="fa-regular fa-copy"></i>
+          </button>
+        </div>
+        <div class="cred-row highlight">
+          <span class="cred-label">Temporary Password:</span>
+          <code id="credModalPassword">Pass#1234</code>
+          <button type="button" class="copy-btn" onclick="copyToClipboard('credModalPassword')">
+            <i class="fa-regular fa-copy"></i>
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer-actions">
+        <button type="button" class="glass-btn primary-btn btn-block" id="credModalTestLoginBtn">
+          <i class="fa-solid fa-right-to-bracket"></i> Switch & Sign In with These Credentials
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="glass-footer">
+    <p>
+      &copy; 2026 <strong>Setu Moolya (सेतुमूल्य)</strong> &bull; Every Root Deserves Its Worth &bull; Built with Express &amp; Supabase
+    </p>
+  </footer>
+
+  <!-- Application Script -->
+  <script src="app.js"></script>
+</body>
+</html>
