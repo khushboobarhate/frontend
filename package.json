@@ -1,0 +1,36 @@
+{
+  "name": "setu-moolya-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Setu Moolya (सेतुमूल्य) — AgriTech B2B Marketplace Frontend",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "^14.2.15",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "next-intl": "^3.22.1",
+    "react-hook-form": "^7.53.1",
+    "@hookform/resolvers": "^3.9.1",
+    "zod": "^3.23.8",
+    "lucide-react": "^0.447.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "@types/node": "^20.17.0",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "tailwindcss": "^3.4.13",
+    "postcss": "^8.4.47",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.15"
+  }
+}
