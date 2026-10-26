@@ -1,42 +1,43 @@
-import type { Metadata } from 'next';
-import { Noto_Sans_Devanagari, Plus_Jakarta_Sans, Space_Grotesk } from 'next/font/google';
-import { AuthProvider } from '@/lib/auth/context';
-import './globals.css';
-
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ['latin'],
-  variable: '--font-jakarta',
-  display: 'swap',
+import type { Metadata } from "next";
+import {
+  DM_Sans,
+  DM_Serif_Display,
+  Noto_Sans_Devanagari,
+} from "next/font/google";
+import { AuthProvider } from "@/lib/auth/context";
+import "./globals.css";
+const sans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
 });
-
-const devanagari = Noto_Sans_Devanagari({
-  subsets: ['latin'],
-  variable: '--font-noto-devanagari',
-  display: 'swap',
+const serif = DM_Serif_Display({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-serif",
+  display: "swap",
 });
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  variable: '--font-space-grotesk',
-  display: 'swap',
+const hindi = Noto_Sans_Devanagari({
+  subsets: ["devanagari"],
+  variable: "--font-hindi",
+  display: "swap",
 });
-
 export const metadata: Metadata = {
-  title: 'Setu Moolya | AgriTech Value Chain',
+  title: {
+    default: "SetuMoolya — Rooted in fair value",
+    template: "%s · SetuMoolya",
+  },
   description:
-    'Setu Moolya connects farmers, FPOs, and B2B buyers through transparent pricing, verified sourcing, and secure digital escrow.',
+    "A more connected future for Indian agriculture. Meet farmers, discover harvests, and build direct relationships on SetuMoolya.",
 };
-
 export default function RootLayout({
   children,
-  params,
 }: {
   children: React.ReactNode;
-  params: { locale?: string };
 }) {
   return (
-    <html lang={params.locale ?? 'en'}>
-      <body className={`${jakarta.variable} ${devanagari.variable} ${spaceGrotesk.variable}`}>
+    <html lang="en" data-scroll-behavior="smooth">
+      <body className={`${sans.variable} ${serif.variable} ${hindi.variable}`}>
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

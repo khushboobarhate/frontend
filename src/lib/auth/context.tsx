@@ -1,5 +1,4 @@
-'use client';
-
+"use client";
 import {
   createContext,
   useCallback,
@@ -7,175 +6,109 @@ import {
   useEffect,
   useState,
   type ReactNode,
-} from 'react';
-import type { AuthSession, UserProfile, UserRole } from '@/types';
-import {
-  adminLogin,
-  buyerLogin,
-  farmerLogin,
-  getAdminProfile,
-  getBuyerProfile,
-  getFarmerProfile,
-  ApiRequestError,
-} from '@/lib/api/client';
-
-const USER_STORAGE_KEY = 'sm_user';
-
-function setTokenCookie(token: string) {
-  const secure = typeof window !== 'undefined' && window.location.protocol === 'https:';
-  document.cookie = `sm_token=${encodeURIComponent(token)}; path=/; SameSite=Strict${secure ? '; Secure' : ''}; max-age=86400`;
-}
-
-function clearSession() {
-  document.cookie = 'sm_token=; path=/; max-age=0';
-  try {
-    sessionStorage.removeItem(USER_STORAGE_KEY);
-  } catch (error) {
-    console.error('Could not clear the saved session:', error);
-  }
-}
-
-function getTokenFromCookie(): string | null {
-  if (typeof document === 'undefined') return null;
-  const match = document.cookie.match(/(?:^|;\s*)sm_token=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
-function getUserFromStorage(): UserProfile | null {
-  try {
-    const raw = sessionStorage.getItem(USER_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as UserProfile) : null;
-  } catch (error) {
-    console.error('Could not read the saved session:', error);
-    return null;
-  }
-}
-
-function saveUserToStorage(user: UserProfile) {
-  try {
-    sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
-  } catch (error) {
-    console.error('Could not save the authenticated profile:', error);
-  }
-}
-
+} from "react";
+import type { LoginCredentials, UserProfile, UserRole } from "@/types";
+import { signIn } from "@/lib/api/client";
 interface AuthContextType {
   user: UserProfile | null;
-  token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  sessionError: string;
   login: (
     role: UserRole,
-    credentials: { login_id?: string; email?: string; password: string }
-  ) => Promise<void>;
-  logout: () => void;
+    credentials: LoginCredentials,
+  ) => Promise<UserProfile>;
+  logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-async function fetchProfile(role: UserRole) {
-  if (role === 'admin') return getAdminProfile();
-  if (role === 'farmer') return getFarmerProfile();
-  return getBuyerProfile();
-}
-
+const Context = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
+  const [isLoading, setLoading] = useState(true);
+  const [sessionError, setSessionError] = useState("");
+  const refreshProfile = useCallback(async () => {
+    setSessionError("");
+    const response = await fetch("/api/session", { cache: "no-store" });
+    const data = await response.json();
+    if (!response.ok) {
+      setSessionError(data.message);
+      throw new Error(data.message);
+    }
+    setUser(data.user);
+  }, []);
   useEffect(() => {
-    const storedToken = getTokenFromCookie();
-    const storedUser = getUserFromStorage();
-    if (!storedToken || !storedUser) {
-      setIsLoading(false);
-      return;
-    }
-
-    setToken(storedToken);
-    void fetchProfile(storedUser.role)
-      .then(({ profile }) => {
-        setUser(profile);
-        saveUserToStorage(profile);
+    let active = true;
+    fetch("/api/session", { cache: "no-store" })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!active) return;
+        if (response.ok) setUser(data.user);
+        else setSessionError(data.message);
       })
-      .catch((error: unknown) => {
-        console.error('Could not restore the authenticated profile:', error);
-        if (error instanceof ApiRequestError && [401, 403].includes(error.status)) {
-          clearSession();
-          setToken(null);
-          setUser(null);
-        } else {
-          setUser(storedUser);
-        }
+      .catch(() => {
+        if (active)
+          setSessionError("Please check your connection and try again.");
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    const expired = () => {
+      setUser(null);
+      setSessionError("Your session has ended. Please sign in again.");
+    };
+    window.addEventListener("sm:session-expired", expired);
+    return () => {
+      active = false;
+      window.removeEventListener("sm:session-expired", expired);
+    };
   }, []);
-
-  const login = useCallback(async (
-    role: UserRole,
-    credentials: { login_id?: string; email?: string; password: string }
-  ) => {
-    let session: AuthSession;
-    switch (role) {
-      case 'farmer':
-        session = await farmerLogin(credentials);
-        break;
-      case 'buyer':
-        session = await buyerLogin(credentials);
-        break;
-      case 'admin':
-        session = await adminLogin(credentials);
-        break;
-      default:
-        throw new Error(`Unknown role: ${role}`);
-    }
-
-    setTokenCookie(session.access_token);
-    saveUserToStorage(session.profile);
-    setToken(session.access_token);
-    setUser(session.profile);
-  }, []);
-
-  const logout = useCallback(() => {
-    clearSession();
-    setToken(null);
+  const login = useCallback(
+    async (role: UserRole, credentials: LoginCredentials) => {
+      const response = await signIn(role, credentials);
+      const identity = response.data.admin || response.data.user;
+      if (!identity)
+        throw new Error("We couldn’t load your account. Please try again.");
+      let profile = {
+        ...identity,
+        must_change_password: response.data.must_change_password,
+      };
+      // Restore the complete profile; sign-in returns only an identity summary.
+      try {
+        const session = await fetch("/api/session", { cache: "no-store" });
+        const data = await session.json();
+        if (session.ok && data.user) profile = data.user;
+      } catch {
+        /* The identity can still open the account; restoration can be retried. */
+      }
+      setUser(profile);
+      setSessionError("");
+      return profile;
+    },
+    [],
+  );
+  const logout = useCallback(async () => {
+    const response = await fetch("/api/session", { method: "DELETE" });
+    if (!response.ok) throw new Error("Could not sign out. Please try again.");
     setUser(null);
   }, []);
-
-  const refreshProfile = useCallback(async () => {
-    if (!user || !token) return;
-    try {
-      const { profile } = await fetchProfile(user.role);
-      setUser(profile);
-      saveUserToStorage(profile);
-    } catch (error) {
-      if (error instanceof ApiRequestError && error.status === 401) {
-        logout();
-      }
-      throw error;
-    }
-  }, [user, token, logout]);
-
   return (
-    <AuthContext.Provider
+    <Context.Provider
       value={{
         user,
-        token,
         isLoading,
-        isAuthenticated: !!user && !!token,
+        isAuthenticated: !!user,
+        sessionError,
         login,
         logout,
         refreshProfile,
       }}
     >
       {children}
-    </AuthContext.Provider>
+    </Context.Provider>
   );
 }
-
-export function useAuth(): AuthContextType {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within an AuthProvider');
+export function useAuth() {
+  const context = useContext(Context);
+  if (!context) throw new Error("AuthProvider is required.");
   return context;
 }

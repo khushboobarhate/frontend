@@ -1,216 +1,195 @@
 import type {
-  AuthSession,
+  ApiResponse,
+  ApprovalResult,
+  CallLog,
+  CallResult,
+  Crop,
+  Interest,
   LoginCredentials,
-  OtpSendResponse,
-  OtpVerifyResponse,
-  RegistrationResponse,
-  AdminDashboardResponse,
-  AdminApproveResponse,
-  AdminUsersResponse,
-  UserProfile,
-  HealthCheckResponse,
+  LoginData,
+  MemberRole,
+  Pagination,
   RegistrationRequest,
-} from '@/types';
-
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000').replace(/\/$/, '');
-
+  RegistrationStatus,
+  UserProfile,
+  UserRole,
+} from "@/types";
 export class ApiRequestError extends Error {
-  status: number;
-  data: unknown;
-
-  constructor(message: string, status: number, data?: unknown) {
+  constructor(
+    message: string,
+    public status: number,
+    public code?: string,
+  ) {
     super(message);
-    this.name = 'ApiRequestError';
-    this.status = status;
-    this.data = data;
+    this.name = "ApiRequestError";
   }
 }
-
-function getAuthToken(): string | null {
-  if (typeof document === 'undefined') return null;
-  const match = document.cookie.match(/(?:^|;\s*)sm_token=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
-async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+export async function request<T>(
+  endpoint: string,
+  options: RequestInit = {},
+): Promise<T> {
   const headers = new Headers(options.headers);
-  if (!(options.body instanceof FormData)) headers.set('Content-Type', 'application/json');
-
-  const token = getAuthToken();
-  if (token) headers.set('Authorization', `Bearer ${token}`);
-
+  if (options.body && !(options.body instanceof FormData))
+    headers.set("Content-Type", "application/json");
   let response: Response;
   try {
-    response = await fetch(`${API_BASE}${endpoint}`, {
+    response = await fetch(`/api/backend${endpoint}`, {
       ...options,
       headers,
-      credentials: 'include',
+      cache: "no-store",
     });
-  } catch (error) {
-    throw new ApiRequestError(
-      error instanceof Error ? error.message : 'Could not connect to the backend.',
-      0
-    );
+  } catch {
+    throw new ApiRequestError("Please check your connection and try again.", 0);
   }
-
-  const contentType = response.headers.get('content-type');
-  const data: unknown = contentType?.includes('application/json')
-    ? await response.json()
-    : await response.text();
-
+  const data = await response.json().catch(() => ({
+    message: "We couldn’t complete that request. Please try again.",
+  }));
   if (!response.ok) {
-    const errorData = data as { error?: string; message?: string } | null;
+    if (response.status === 401 && typeof window !== "undefined")
+      window.dispatchEvent(new Event("sm:session-expired"));
     throw new ApiRequestError(
-      errorData?.message || errorData?.error || `Request failed with status ${response.status}`,
+      data.message || "Please try again.",
       response.status,
-      data
+      data.code,
     );
   }
-
-  return data as T;
+  return data;
 }
-
-export function checkHealth(): Promise<HealthCheckResponse> {
-  return request<HealthCheckResponse>('/health');
-}
-
-export function sendOtp(phone: string): Promise<OtpSendResponse> {
-  return request<OtpSendResponse>('/api/otp/send', {
-    method: 'POST',
-    body: JSON.stringify({ phone }),
-  });
-}
-
-export function verifyOtp(phone: string, otp: string): Promise<OtpVerifyResponse> {
-  return request<OtpVerifyResponse>('/api/otp/verify', {
-    method: 'POST',
-    body: JSON.stringify({ phone, otp }),
-  });
-}
-
-export function verifyWidgetOtp(phone: string, accessToken: string): Promise<OtpVerifyResponse> {
-  return request<OtpVerifyResponse>('/api/otp/verify', {
-    method: 'POST',
-    body: JSON.stringify({ phone, access_token: accessToken }),
-  });
-}
-
-async function login(endpoint: string, credentials: LoginCredentials): Promise<AuthSession> {
-  return request<AuthSession>(endpoint, {
-    method: 'POST',
+export const signIn = (role: UserRole, credentials: LoginCredentials) =>
+  request<ApiResponse<LoginData>>(`/api/${role}/login`, {
+    method: "POST",
     body: JSON.stringify(credentials),
   });
-}
-
-export function farmerLogin(credentials: LoginCredentials): Promise<AuthSession> {
-  return login('/api/farmer/login', credentials);
-}
-
-export async function farmerRegister(formData: FormData): Promise<RegistrationResponse> {
-  const response = await request<{
-    success: boolean;
-    message: string;
-    data: { request_id: string };
-  }>('/api/farmer/register', { method: 'POST', body: formData });
-  return { success: response.success, message: response.message, request_id: response.data.request_id };
-}
-
-export async function getFarmerProfile(): Promise<{ success: boolean; profile: UserProfile }> {
-  const response = await request<{ success: boolean; data: UserProfile }>('/api/farmer/profile');
-  return { success: response.success, profile: response.data };
-}
-
-export function buyerLogin(credentials: LoginCredentials): Promise<AuthSession> {
-  return login('/api/buyer/login', credentials);
-}
-
-export async function buyerRegister(formData: FormData): Promise<RegistrationResponse> {
-  const response = await request<{
-    success: boolean;
-    message: string;
-    data: { request_id: string };
-  }>('/api/buyer/register', { method: 'POST', body: formData });
-  return { success: response.success, message: response.message, request_id: response.data.request_id };
-}
-
-export async function getBuyerProfile(): Promise<{ success: boolean; profile: UserProfile }> {
-  const response = await request<{ success: boolean; data: UserProfile }>('/api/buyer/profile');
-  return { success: response.success, profile: response.data };
-}
-
-export function adminLogin(credentials: LoginCredentials): Promise<AuthSession> {
-  return login('/api/admin/login', credentials);
-}
-
-export async function getAdminProfile(): Promise<{ success: boolean; profile: UserProfile }> {
-  const response = await request<{ success: boolean; data: UserProfile }>('/api/admin/profile');
-  return { success: response.success, profile: response.data };
-}
-
-export async function getAdminDashboard(params?: {
-  role?: string;
+export const registerAccount = (role: MemberRole, data: FormData) =>
+  request<
+    ApiResponse<{
+      request_id: string;
+      email: string;
+      full_name: string;
+      status: RegistrationStatus;
+    }>
+  >(`/api/${role}/register`, { method: "POST", body: data });
+export const forgotPassword = (role: MemberRole, email: string) =>
+  request<ApiResponse<never>>(`/api/${role}/forgot-password`, {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+export const resetPassword = (
+  role: MemberRole,
+  token_hash: string,
+  password: string,
+) =>
+  request<ApiResponse<never>>(`/api/${role}/reset-password`, {
+    method: "POST",
+    body: JSON.stringify({ token_hash, password }),
+  });
+export const changePassword = (
+  role: MemberRole,
+  current_password: string,
+  password: string,
+) =>
+  request<ApiResponse<never>>(`/api/${role}/change-password`, {
+    method: "POST",
+    body: JSON.stringify({ current_password, password }),
+  });
+const query = (params: Record<string, string | number | undefined>) => {
+  const q = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== "") q.set(key, String(value));
+  });
+  return q.toString();
+};
+export const getRequests = (params: {
+  role?: MemberRole;
+  status?: RegistrationStatus | "all";
   page?: number;
   limit?: number;
-}): Promise<AdminDashboardResponse> {
-  const searchParams = new URLSearchParams();
-  if (params?.role) searchParams.set('role', params.role);
-  if (params?.page) searchParams.set('page', params.page.toString());
-  if (params?.limit) searchParams.set('limit', params.limit.toString());
-  const query = searchParams.toString();
-  const response = await request<{
-    success: boolean;
-    data: {
-      pending_requests: RegistrationRequest[];
-      pagination: AdminDashboardResponse['pagination'];
-    };
-  }>(`/api/admin/dashboard${query ? `?${query}` : ''}`);
-  return {
-    success: response.success,
-    data: response.data.pending_requests,
-    pagination: response.data.pagination,
-  };
-}
-
-export function getRequestDetail(
-  requestId: string
-): Promise<{ success: boolean; data: RegistrationRequest }> {
-  return request(`/api/admin/requests/${encodeURIComponent(requestId)}`);
-}
-
-export function approveRequest(requestId: string): Promise<AdminApproveResponse> {
-  return request(`/api/admin/requests/${encodeURIComponent(requestId)}/approve`, {
-    method: 'POST',
+}) =>
+  request<
+    ApiResponse<{
+      requests: RegistrationRequest[];
+      pending_requests?: RegistrationRequest[];
+      pagination: Pagination;
+    }>
+  >(`/api/admin/requests?${query(params)}`);
+export const getRequestDetail = (id: string) =>
+  request<ApiResponse<RegistrationRequest>>(
+    `/api/admin/requests/${encodeURIComponent(id)}`,
+  );
+export const approveRequest = (id: string) =>
+  request<ApiResponse<ApprovalResult>>(
+    `/api/admin/requests/${encodeURIComponent(id)}/approve`,
+    { method: "POST" },
+  );
+export const resendCredentials = (id: string) =>
+  request<ApiResponse<ApprovalResult>>(
+    `/api/admin/requests/${encodeURIComponent(id)}/send-credentials`,
+    { method: "POST" },
+  );
+export const rejectRequest = (id: string, reason: string) =>
+  request<ApiResponse<unknown>>(
+    `/api/admin/requests/${encodeURIComponent(id)}/reject`,
+    { method: "POST", body: JSON.stringify({ reason }) },
+  );
+export const correctEmail = (id: string, email: string) =>
+  request<ApiResponse<RegistrationRequest>>(
+    `/api/admin/requests/${encodeURIComponent(id)}`,
+    { method: "PATCH", body: JSON.stringify({ email }) },
+  );
+export const getUsers = (role: MemberRole, page = 1) =>
+  request<
+    ApiResponse<{
+      users: UserProfile[];
+      total: number;
+      page: number;
+      totalPages: number;
+    }>
+  >(`/api/admin/users?${query({ role, page, limit: 20 })}`);
+export const getCrops = (
+  role: UserRole,
+  params: { crop_type?: string; search?: string } = {},
+) => request<ApiResponse<Crop[]>>(`/api/${role}/crops?${query(params)}`);
+export const getCrop = (role: MemberRole, id: string) =>
+  request<ApiResponse<Crop>>(`/api/${role}/crops/${encodeURIComponent(id)}`);
+export const createCrop = (data: FormData) =>
+  request<ApiResponse<Crop>>("/api/farmer/crops", {
+    method: "POST",
+    body: data,
   });
-}
-
-export function rejectRequest(requestId: string): Promise<{ success: boolean; message: string }> {
-  return request(`/api/admin/requests/${encodeURIComponent(requestId)}/reject`, {
-    method: 'POST',
+export const deleteCrop = (id: string) =>
+  request<ApiResponse<never>>(`/api/farmer/crops/${encodeURIComponent(id)}`, {
+    method: "DELETE",
   });
-}
-
-export async function getAdminUsers(params?: {
-  role?: string;
-  page?: number;
-  limit?: number;
-}): Promise<AdminUsersResponse> {
-  const searchParams = new URLSearchParams();
-  if (params?.role) searchParams.set('role', params.role);
-  if (params?.page) searchParams.set('page', params.page.toString());
-  if (params?.limit) searchParams.set('limit', params.limit.toString());
-  const query = searchParams.toString();
-  const response = await request<{
-    success: boolean;
-    data: { users: UserProfile[]; total: number; page: number; totalPages: number };
-  }>(`/api/admin/users${query ? `?${query}` : ''}`);
-  return {
-    success: response.success,
-    data: response.data.users,
-    pagination: {
-      total: response.data.total,
-      page: response.data.page,
-      limit: params?.limit ?? 20,
-      totalPages: response.data.totalPages,
-    },
-  };
+export const getInterests = (role: MemberRole) =>
+  request<ApiResponse<Interest[]>>(`/api/${role}/interests`);
+export const expressInterest = (id: string, rating: number, notes: string) =>
+  request<ApiResponse<unknown>>(
+    `/api/buyer/crops/${encodeURIComponent(id)}/interest`,
+    { method: "POST", body: JSON.stringify({ rating, notes }) },
+  );
+export const setAvailability = (role: MemberRole, is_call_available: boolean) =>
+  request<ApiResponse<{ is_call_available: boolean }>>(
+    `/api/${role}/availability`,
+    { method: "PATCH", body: JSON.stringify({ is_call_available }) },
+  );
+export const initiateCall = (
+  role: MemberRole,
+  receiver_id: string,
+  crop_id?: string,
+) =>
+  request<ApiResponse<CallResult>>(`/api/${role}/calls/initiate`, {
+    method: "POST",
+    body: JSON.stringify({
+      [role === "buyer" ? "farmer_id" : "buyer_id"]: receiver_id,
+      crop_id,
+    }),
+  });
+export const getCallLogs = () =>
+  request<ApiResponse<CallLog[]>>("/api/admin/call-logs");
+export function assetUrl(path?: string | null): string | null {
+  if (!path) return null;
+  if (/^https?:\/\//.test(path)) return path;
+  if (!path.startsWith("/uploads/")) return null;
+  // Uploads stay on the backend; only the public backend URL is exposed.
+  return `${(process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000").replace(/\/$/, "")}${path}`;
 }
