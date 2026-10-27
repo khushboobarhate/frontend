@@ -1,4 +1,5 @@
 "use client";
+// This file is part of the Setu Moolya project, which is licensed under the MIT License.
 import { useCallback, useState, type FormEvent } from "react";
 import Image from "next/image";
 import {
