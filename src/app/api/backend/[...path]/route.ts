@@ -1,9 +1,11 @@
+import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import {
   backend,
   clearSession,
   sameOrigin,
   saveSession,
+  SESSION,
 } from "@/lib/server/backend";
 import type { UserProfile } from "@/types";
 
@@ -22,7 +24,9 @@ async function proxy(
   if (
     path[0] !== "api" ||
     !["farmer", "buyer", "admin"].includes(path[1]) ||
-    path.some((part) => part === ".." || part.includes("/"))
+    path.some(
+      (part) => part === ".." || part.includes("/") || part.includes("\\"),
+    )
   ) {
     return NextResponse.json(
       { success: false, message: "Endpoint not found." },
@@ -30,6 +34,66 @@ async function proxy(
     );
   }
   try {
+    const type = request.headers.get("content-type") || "";
+    if (
+      type &&
+      !/^(application\/json|multipart\/form-data|application\/x-www-form-urlencoded)(;|$)/i.test(
+        type,
+      )
+    )
+      return NextResponse.json(
+        { success: false, message: "Use JSON or a multipart form." },
+        { status: 415 },
+      );
+    const cropUpload =
+      request.method === "POST" && path.join("/") === "api/farmer/crops";
+    if (cropUpload) {
+      if (!(await cookies()).has(SESSION.token))
+        return NextResponse.json(
+          { success: false, message: "Sign in before uploading crops." },
+          { status: 401 },
+        );
+      const check = await backend("/api/farmer/profile");
+      if (!check.ok)
+        return NextResponse.json(
+          {
+            success: false,
+            message: "An approved farmer account is required.",
+          },
+          { status: check.status },
+        );
+    }
+    let body: ArrayBuffer | undefined;
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      const maximum = type.startsWith("multipart/form-data")
+        ? (cropUpload ? 105 : 6) * 1024 * 1024
+        : 64 * 1024;
+      const reader = request.body?.getReader();
+      const chunks: Uint8Array[] = [];
+      let length = 0;
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          length += value.byteLength;
+          if (length > maximum) {
+            await reader.cancel();
+            return NextResponse.json(
+              { success: false, message: "The request is too large." },
+              { status: 413 },
+            );
+          }
+          chunks.push(value);
+        }
+      }
+      const merged = new Uint8Array(length);
+      let offset = 0;
+      for (const chunk of chunks) {
+        merged.set(chunk, offset);
+        offset += chunk.byteLength;
+      }
+      body = merged.buffer;
+    }
     const headers = new Headers();
     if (request.headers.has("content-type"))
       headers.set("content-type", request.headers.get("content-type")!);
@@ -39,7 +103,7 @@ async function proxy(
         method: request.method,
         headers,
         ...(request.method !== "GET" && request.method !== "HEAD"
-          ? { body: await request.arrayBuffer() }
+          ? { body }
           : {}),
       },
     );

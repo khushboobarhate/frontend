@@ -129,9 +129,12 @@ export function Modal({
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const node = dialog.current;
+    const previousOverflow = document.body.style.overflow;
     node?.showModal();
+    document.body.style.overflow = "hidden";
     return () => {
       node?.close();
+      document.body.style.overflow = previousOverflow;
     };
   }, []);
   return (

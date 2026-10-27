@@ -18,11 +18,11 @@ import {
   X,
 } from "lucide-react";
 import { Link, useRouter } from "@/i18n/routing";
+import { AvatarMenu } from "./avatar-menu";
 import { useAuth } from "@/lib/auth/context";
 import type { UserRole } from "@/types";
 import {
   AdminMetrics,
-  Avatar,
   CallActivity,
   PeoplePanel,
   RequestPanel,
@@ -62,16 +62,17 @@ export function Workspace() {
   const { user, isLoading, sessionError, logout, refreshProfile } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
-  const [open, setOpen] = useState(false);
+  const route = params.toString();
+  const [openFor, setOpenFor] = useState<string | null>(null);
+  const open = openFor === route;
+  const setOpen = (value: boolean) => setOpenFor(value ? route : null);
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState("");
   const [signingOut, setSigningOut] = useState(false);
-  useEffect(() => {
-    setOpen(false);
-  }, [params]);
+
   useEffect(() => {
     const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") setOpenFor(null);
     };
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
@@ -127,7 +128,9 @@ export function Workspace() {
     setSigningOut(true);
     try {
       await logout();
-      router.replace("/login");
+      router.replace(
+        user.role === "admin" ? "/admin/login" : `/login?role=${user.role}`,
+      );
     } catch (error) {
       setError(error instanceof Error ? error.message : "Please try again.");
     } finally {
@@ -209,19 +212,7 @@ export function Workspace() {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
             <LanguageSwitch />
-            <div className="workspace-user">
-              <div>
-                {user.full_name}
-                <small>
-                  {user.role === "admin"
-                    ? "Administrator"
-                    : user.role === "farmer"
-                      ? "Farmer"
-                      : "Buyer"}
-                </small>
-              </div>
-              <Avatar name={user.full_name} photo={user.photo_url} />
-            </div>
+            <AvatarMenu />
           </div>
         </header>
         <main className="workspace-main" id="main-content">

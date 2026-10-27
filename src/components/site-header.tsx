@@ -4,6 +4,7 @@ import { ArrowUpRight, ChevronDown, Globe2, Menu, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname, useRouter } from "@/i18n/routing";
 import { useAuth } from "@/lib/auth/context";
+import { AvatarMenu } from "./avatar-menu";
 import { Brand } from "./ui";
 import type { Locale } from "@/types";
 export function LanguageSwitch() {
@@ -66,10 +67,7 @@ export function SiteHeader({ simple = false }: { simple?: boolean }) {
           <LanguageSwitch />
           {!simple &&
             (user ? (
-              <Link href="/dashboard" className="button button-small">
-                {t("workspace")}
-                <ArrowUpRight size={16} />
-              </Link>
+              <AvatarMenu />
             ) : (
               <>
                 <Link className="sign-in-link" href="/login">
@@ -114,7 +112,6 @@ export function Footer() {
           <span>THE COMMUNITY</span>
           <Link href="/register?role=farmer">For farmers</Link>
           <Link href="/register?role=buyer">For buyers</Link>
-          <Link href="/login?role=admin">Admin portal</Link>
         </div>
         <div className="footer-links">
           <span>EXPLORE</span>

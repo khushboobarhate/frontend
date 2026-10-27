@@ -1,13 +1,11 @@
 "use client";
 import Image from "next/image";
 import {
-  ArrowDown,
   ArrowRight,
   ArrowUpRight,
   Check,
   Handshake,
   Leaf,
-  MoveUpRight,
   ShieldCheck,
   Sprout,
   Sun,

@@ -27,6 +27,7 @@ import {
   resetPassword,
 } from "@/lib/api/client";
 import type { MemberRole, UserRole } from "@/types";
+import { fieldRules, registrationError, validEmail } from "@/lib/validation";
 import { Brand, Notice, Spinner } from "./ui";
 import { LanguageSwitch } from "./site-header";
 const errorText = (error: unknown) =>
@@ -111,24 +112,17 @@ export function AuthShell({
 export function RolePicker({
   value,
   onChange,
-  admin = false,
 }: {
   value: UserRole;
   onChange: (role: UserRole) => void;
-  admin?: boolean;
 }) {
   const t = useTranslations("Auth");
   const roles: { role: UserRole; Icon: typeof Sprout }[] = [
     { role: "farmer", Icon: Sprout },
     { role: "buyer", Icon: ShoppingBasket },
-    ...(admin ? [{ role: "admin" as const, Icon: ShieldCheck }] : []),
   ];
   return (
-    <div
-      className={`role-picker ${admin ? "three-roles" : ""}`}
-      role="group"
-      aria-label="Account role"
-    >
+    <div className="role-picker" role="group" aria-label="Account role">
       {roles.map(({ role, Icon }) => (
         <button
           type="button"
@@ -218,15 +212,14 @@ export function PasswordRules({ value }: { value: string }) {
     </div>
   );
 }
-export function LoginForm() {
+export function LoginForm({ adminMode = false }: { adminMode?: boolean }) {
   const t = useTranslations("Auth");
   const params = useSearchParams();
   const router = useRouter();
   const auth = useAuth();
   const initial = params.get("role");
-  const [role, setRole] = useState<UserRole>(
-    initial === "admin" ? "admin" : memberRole(initial),
-  );
+  const [member, setRole] = useState<MemberRole>(memberRole(initial));
+  const role: UserRole = adminMode ? "admin" : member;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -239,6 +232,8 @@ export function LoginForm() {
     setBusy(true);
     setError("");
     try {
+      if (!validEmail(email.trim()))
+        throw new Error("Enter a valid email address.");
       const user = await auth.login(role, { email: email.trim(), password });
       router.push(
         user.must_change_password ? "/dashboard?view=account" : "/dashboard",
@@ -252,16 +247,17 @@ export function LoginForm() {
   return (
     <AuthShell>
       <span className="eyebrow">A LITTLE CLOSER TO POSSIBILITY</span>
-      <h1>{t("welcome")}</h1>
+      <h1>{adminMode ? "Administrator sign in" : t("welcome")}</h1>
       <p className="form-subtitle">{t("loginDescription")}</p>
-      <RolePicker
-        value={role}
-        onChange={(value) => {
-          setRole(value);
-          setError("");
-        }}
-        admin
-      />
+      {!adminMode && (
+        <RolePicker
+          value={role}
+          onChange={(value) => {
+            setRole(value as MemberRole);
+            setError("");
+          }}
+        />
+      )}
       {error && <Notice>{error}</Notice>}
       {params.get("password") === "updated" && (
         <Notice kind="success">
@@ -276,6 +272,7 @@ export function LoginForm() {
             <input
               id="login-email"
               type="email"
+              maxLength={254}
               autoComplete="username"
               placeholder="you@example.com"
               required
@@ -295,7 +292,7 @@ export function LoginForm() {
             <Link href={`/forgot-password?role=${role}`}>{t("forgot")}</Link>
           </div>
         )}
-        <button className="button full-width" disabled={busy}>
+        <button className="button full-width" disabled={busy || auth.isLoading}>
           {busy ? (
             <Spinner label="Signing you in…" />
           ) : (
@@ -314,13 +311,15 @@ export function LoginForm() {
             : "Use the email and temporary password sent after approval. Your harvest, your network — all in one place."}
         </p>
       </div>
-      <p className="form-switch">
-        {t("noAccount")}{" "}
-        <Link href={`/register?role=${role === "admin" ? "farmer" : role}`}>
-          {t("join")}
-          <ArrowUpRight size={14} />
-        </Link>
-      </p>
+      {!adminMode && (
+        <p className="form-switch">
+          {t("noAccount")}{" "}
+          <Link href={`/register?role=${role === "admin" ? "farmer" : role}`}>
+            {t("join")}
+            <ArrowUpRight size={14} />
+          </Link>
+        </p>
+      )}
     </AuthShell>
   );
 }
@@ -352,35 +351,28 @@ export function RegisterForm() {
     email: string;
     full_name: string;
   } | null>(null);
-  useEffect(() => {
-    if (!photo) {
-      setPreview("");
-      return;
-    }
-    const url = URL.createObjectURL(photo);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [photo]);
+  useEffect(
+    () => () => {
+      if (preview) URL.revokeObjectURL(preview);
+    },
+    [preview],
+  );
+  const selectPhoto = (file: File | null) => {
+    setPhoto(file);
+    setPreview(file ? URL.createObjectURL(file) : "");
+  };
   const update = (key: keyof typeof fields, value: string) =>
     setFields((current) => ({ ...current, [key]: value }));
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError("");
-    if (step === 1) {
-      setStep(2);
+    const invalid = registrationError(fields, role, step);
+    if (invalid) {
+      setError(invalid);
       return;
     }
-    const required = [
-      "full_name",
-      "email",
-      "mobile_number",
-      "state",
-      "city",
-      "full_address",
-      ...(role === "farmer" ? ["land_location"] : []),
-    ] as (keyof typeof fields)[];
-    if (required.some((key) => !fields[key].trim())) {
-      setError("Please complete your contact and location details.");
+    if (step === 1) {
+      setStep(2);
       return;
     }
     setBusy(true);
@@ -419,10 +411,21 @@ export function RegisterForm() {
         onChange={(event) => update(key, event.target.value)}
         required={options.required}
         placeholder={placeholder}
-        maxLength={2000}
+        minLength={fieldRules[key]?.[0]}
+        maxLength={
+          key === "mobile_number"
+            ? 10
+            : key === "email"
+              ? 254
+              : fieldRules[key]?.[1] || 3
+        }
         {...(key === "age" ? { min: 18, max: 120, step: 1 } : {})}
         {...(key === "mobile_number"
-          ? { pattern: "[+0-9 ()-]{10,20}", inputMode: "tel" as const }
+          ? {
+              pattern: "[0-9]{10}",
+              inputMode: "numeric" as const,
+              title: "Exactly 10 digits, without a country code",
+            }
           : {})}
       />
     </label>
@@ -503,7 +506,7 @@ export function RegisterForm() {
                   type: "email",
                   autoComplete: "email",
                 })}
-                {field("mobile_number", t("phone"), "+91 98765 43210", {
+                {field("mobile_number", t("phone"), "9876543210", {
                   required: true,
                   type: "tel",
                   autoComplete: "tel",
@@ -564,7 +567,8 @@ export function RegisterForm() {
                     }
                     required
                     placeholder="House, street, village, and PIN code"
-                    maxLength={2000}
+                    minLength={10}
+                    maxLength={500}
                   />
                 </label>
                 {role === "farmer" &&
@@ -592,9 +596,10 @@ export function RegisterForm() {
                           "Choose a JPEG, PNG, or WebP photo under 5 MB.",
                         );
                         event.target.value = "";
+                        selectPhoto(null);
                         return;
                       }
-                      setPhoto(file);
+                      selectPhoto(file);
                       setError("");
                     }}
                   />
@@ -744,6 +749,7 @@ export function ResetForm() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  /* eslint-disable react-hooks/set-state-in-effect -- Consume browser-only recovery state after hydration, then remove the secret from history. */
   useEffect(() => {
     const params = new URLSearchParams(window.location.hash.slice(1));
     const hash = params.get("token_hash");
@@ -759,6 +765,7 @@ export function ResetForm() {
     );
     setChecked(true);
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError("");

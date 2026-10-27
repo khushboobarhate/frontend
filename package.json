@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "format:check": "prettier --check src tests README.md",
-    "test:integration": "node --test --test-concurrency=1 tests/proxy.integration.mjs"
+    "test:integration": "node --test --test-concurrency=1 tests/proxy.integration.mjs",
+    "test:validation": "node --experimental-strip-types --test tests/validation.test.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.447.0",

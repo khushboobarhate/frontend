@@ -1,8 +1,7 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
-import Image from "next/image";
+import { useCallback, useState } from "react";
+import { Avatar } from "./avatar";
 import {
-  ArrowRight,
   ArrowUpRight,
   Check,
   ChevronLeft,
@@ -18,7 +17,6 @@ import {
 } from "lucide-react";
 import {
   approveRequest,
-  assetUrl,
   correctEmail,
   getCallLogs,
   getRequestDetail,
@@ -27,13 +25,8 @@ import {
   rejectRequest,
   resendCredentials,
 } from "@/lib/api/client";
-import { formatDate, getInitials } from "@/lib/utils";
-import type {
-  MemberRole,
-  Pagination,
-  RegistrationRequest,
-  RegistrationStatus,
-} from "@/types";
+import { formatDate } from "@/lib/utils";
+import type { MemberRole, Pagination, RegistrationStatus } from "@/types";
 import { EmptyState, Modal, Notice, Spinner } from "./ui";
 import { useResource } from "./use-resource";
 export function PaginationControls({
@@ -67,24 +60,6 @@ export function PaginationControls({
           <ChevronRight size={14} />
         </button>
       </div>
-    </div>
-  );
-}
-export function Avatar({
-  name,
-  photo,
-}: {
-  name: string;
-  photo?: string | null;
-}) {
-  const url = assetUrl(photo);
-  return (
-    <div className="user-avatar">
-      {url ? (
-        <Image src={url} alt="" width={60} height={60} unoptimized />
-      ) : (
-        getInitials(name)
-      )}
     </div>
   );
 }
@@ -169,7 +144,7 @@ export function RequestPanel({
                 setRole(event.target.value as MemberRole | "");
                 setPage(1);
               }}
-              style={{ padding: "9px 12px", minHeight: 35, fontSize: 10 }}
+              style={{ padding: "9px 12px", minHeight: 35, fontSize: 14 }}
             >
               <option value="">All roles</option>
               <option value="farmer">Farmers</option>
@@ -291,10 +266,8 @@ function RequestDialog({
   const [notice, setNotice] = useState("");
   const [reason, setReason] = useState("");
   const [rejecting, setRejecting] = useState(false);
-  const [email, setEmail] = useState("");
-  useEffect(() => {
-    if (request) setEmail(request.email || "");
-  }, [request]);
+  const [editedEmail, setEmail] = useState<string | null>(null);
+  const email = editedEmail ?? request?.email ?? "";
   const act = async (kind: "approve" | "reject" | "resend" | "email") => {
     setBusy(true);
     setError("");
@@ -528,7 +501,7 @@ function RequestDialog({
                 </button>
               )}
             </div>
-            <p className="muted" style={{ marginTop: 15, fontSize: 9 }}>
+            <p className="muted" style={{ marginTop: 15, fontSize: 14 }}>
               Passwords are sent only to the contact email. If the member has
               already changed their password, they should use Forgot password.
             </p>

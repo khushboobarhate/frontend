@@ -8,9 +8,10 @@ Use Node.js 22 or newer.
 
 ```sh
 npm ci
-cp .env.example .env.local
 npm run dev
 ```
+
+Create an ignored `.env.local` with `API_BASE_URL=http://localhost:5000` and `NEXT_PUBLIC_API_BASE_URL=http://localhost:5000` when the backend runs locally.
 
 Start the sibling `setu-moolya-backend` project separately with its documented configuration. The default frontend URL is `http://localhost:3000`; Next chooses another port if it is occupied.
 
@@ -29,6 +30,10 @@ The browser calls the frontend's `/api/backend/api/...` routes. Next forwards th
 4. The member signs in using their email and temporary password, then sets a personal password before accessing business screens. Forgot password requests an email recovery link. Reset links use `/reset-password#token_hash=...&role=farmer|buyer` (the unlocalized entry redirects to English and preserves the fragment).
 5. Farmers list crops with photos, quantity, unit, growing method, and price. Buyers search crops, rate their interest, and leave notes. Farmers see buyer interests. Contact buttons request permission from the API before revealing a phone number; tapping that number opens the device's telephone handler.
 
+Registration enforces exactly 10 mobile digits, required location fields, bounded addresses and optional fields, and allowed languages on both client and API. Crop quantities, prices and interest ratings also have bounded numeric validation.
+
+The public sign-in screen offers Farmer and Buyer only. Administrators manually visit `/admin/login` (or `/en/admin/login`); public menus do not link to it. The backend requires an approved admin profile for every admin operation. Each workspace and the public signed-in header have an avatar menu with My account and Sign out. Body/form text is larger, with responsive navigation and readable table labels.
+
 There are three role workspaces:
 
 - **Admin:** registration inbox, request review, credential retry, approved members, crop listings, and contact activity.
@@ -39,7 +44,7 @@ All counts and business records come from the API. The public crop categories ar
 
 ## Sessions and deployment
 
-Access tokens remain in HttpOnly, SameSite=Lax cookies; production cookies also use Secure. Tokens and refresh tokens are removed from the sign-in response sent to browser JavaScript. The backend has no refresh endpoint, so an expired access session requires signing in again. Farmer and buyer sessions restore from their profile endpoint; admin sessions validate using the existing dashboard endpoint.
+Access tokens remain in HttpOnly, SameSite=Lax cookies; production cookies also use Secure. Tokens and refresh tokens are removed from the sign-in response sent to browser JavaScript. The backend has no refresh endpoint, so an expired access session requires signing in again. All three sessions restore from their backend profile endpoint. Identity, role and approval are checked there; changing a URL or unsigned role cookie does not grant permissions.
 
 Serve the production frontend over HTTPS. Preserve the public Host and protocol when using a reverse proxy so the mutation origin checks remain valid. Configure the public backend image origin before building; it must be reachable over HTTPS when the frontend uses HTTPS. Backend authorization remains authoritative for every protected operation.
 
@@ -47,12 +52,13 @@ The backend currently limits authentication attempts by IP. Since these requests
 
 Primary navigation, landing introduction, and account field copy support English, Hindi, and Gujarati through next-intl. Workspace and secondary storytelling copy currently remain English. Preferred communication language is recorded independently during registration.
 
-**Live setup pending:** the backend's `supabase_migration_v4.sql` was intentionally left for the project owner to apply. Live account creation, SMTP delivery, and production Supabase flows still require that setup and real-service verification. This frontend does not apply migrations or seed production accounts.
+**Live verification (27 October 2026):** v4 is applied. The backend passed a controlled live audit of registration, approval, recovery, marketplace actions and RLS using disposable accounts. SMTP connection/authentication passed; real inbox delivery remains untested. The existing admin password was updated from the ignored server `.env` with the operator’s explicit authorization, and sign-in was verified.
 
 ## Verification
 
 ```sh
 npm run type-check
+npm run test:validation
 npm run build
 npm audit
 npm run format:check

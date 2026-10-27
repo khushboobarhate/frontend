@@ -62,10 +62,10 @@ for (const role of ["admin", "farmer", "buyer"])
         "Sample address for local testing only",
       );
   });
-test("admin restoration uses dashboard, never a nonexistent profile", async () => {
+test("admin restoration uses the backend profile, never an identity cookie", async () => {
   const events = await (await fetch(fixture + "/__fixture/events")).json();
-  assert.ok(events.some((x) => x.path === "/api/admin/dashboard"));
-  assert.ok(!events.some((x) => x.path === "/api/admin/profile"));
+  assert.ok(events.some((x) => x.path === "/api/admin/profile"));
+  assert.ok(!events.some((x) => x.path === "/api/admin/dashboard"));
 });
 test("farmer and buyer registration forward multipart fields without OTP/password", async () => {
   for (const role of ["farmer", "buyer"]) {
@@ -183,4 +183,59 @@ test("proxy rejects paths outside role APIs and expires invalid sessions", async
     cookie: "sm_role=farmer; sm_access=invalid",
   });
   assert.equal((await response.json()).user, null);
+});
+
+test("forged admin role/identity cookies do not elevate a buyer token", async () => {
+  let cookie = await login("buyer");
+  cookie = cookie.replace("sm_role=buyer", "sm_role=admin");
+  cookie +=
+    "; sm_identity=" +
+    encodeURIComponent(
+      JSON.stringify({
+        role: "admin",
+        is_approved: true,
+        full_name: "Forged admin",
+      }),
+    );
+  const response = await call("/api/session", { cookie });
+  assert.equal((await response.json()).user, null);
+  const request = await call("/api/backend/api/admin/requests", { cookie });
+  assert.equal(request.status, 401);
+});
+test("public pages omit admin entry points and the manual admin route is present", async () => {
+  for (const route of [
+    "/en",
+    "/en/login",
+    "/en/login?role=admin",
+    "/en/register?role=admin",
+  ]) {
+    const html = await (await fetch(base + route)).text();
+    assert.doesNotMatch(html, /Admin portal|three-roles|href="\/en\/admin/);
+  }
+  const html = await (await fetch(base + "/en/admin/login")).text();
+  assert.match(html, /Administrator sign in/);
+  const protectedPage = await fetch(base + "/en/dashboard", {
+    redirect: "manual",
+  });
+  if (protectedPage.status === 307)
+    assert.match(protectedPage.headers.get("location"), /\/en\/login/);
+  else {
+    const html = await protectedPage.text();
+    assert.match(html, /NEXT_REDIRECT;replace;\/en\/login;307/);
+    assert.doesNotMatch(html, /aria-label="Workspace navigation"/);
+  }
+});
+test("oversized JSON and unauthenticated file uploads are refused by the frontend", async () => {
+  const large = await call("/api/backend/api/buyer/register", {
+    method: "POST",
+    body: { full_name: "a".repeat(66000) },
+  });
+  assert.equal(large.status, 413);
+  const form = new FormData();
+  form.append("crop_name", "Test crop");
+  const upload = await call("/api/backend/api/farmer/crops", {
+    method: "POST",
+    body: form,
+  });
+  assert.equal(upload.status, 401);
 });

@@ -173,11 +173,6 @@ export function createFixtureServer() {
     if (req.headers.authorization !== `Bearer fixture-access-${role}`)
       return send({ success: false, message: "Your session has ended." }, 401);
     if (parts[2] === "profile") {
-      if (role === "admin")
-        return send(
-          { success: false, message: "No admin profile endpoint exists." },
-          404,
-        );
       return send({ success: true, data: profiles[role] });
     }
     if (parts[2] === "change-password")

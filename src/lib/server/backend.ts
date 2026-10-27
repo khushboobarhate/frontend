@@ -49,7 +49,8 @@ export function saveSession(
   };
   response.cookies.set(SESSION.token, token, options);
   response.cookies.set(SESSION.role, user.role, options);
-  response.cookies.set(SESSION.user, JSON.stringify(user), options);
+  // Identity always comes from the authenticated profile endpoint, never a cookie.
+  response.cookies.set(SESSION.user, "", { ...cookieOptions, maxAge: 0 });
   return response;
 }
 export async function sessionRole(): Promise<UserRole | null> {

@@ -45,7 +45,11 @@ export async function request<T>(
     message: "We couldn’t complete that request. Please try again.",
   }));
   if (!response.ok) {
-    if (response.status === 401 && typeof window !== "undefined")
+    if (
+      response.status === 401 &&
+      !endpoint.endsWith("/login") &&
+      typeof window !== "undefined"
+    )
       window.dispatchEvent(new Event("sm:session-expired"));
     throw new ApiRequestError(
       data.message || "Please try again.",
@@ -84,7 +88,7 @@ export const resetPassword = (
     body: JSON.stringify({ token_hash, password }),
   });
 export const changePassword = (
-  role: MemberRole,
+  role: UserRole,
   current_password: string,
   password: string,
 ) =>

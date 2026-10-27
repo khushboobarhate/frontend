@@ -13,12 +13,13 @@ export async function GET() {
   const role = await sessionRole();
   const cookieStore = await cookies();
   if (!role || !cookieStore.has(SESSION.token))
-    return NextResponse.json({ user: null });
+    return NextResponse.json(
+      { user: null },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   try {
     const response = await backend(
-      role === "admin"
-        ? "/api/admin/dashboard?limit=1"
-        : `/api/${role}/profile`,
+      role === "admin" ? "/api/admin/profile" : `/api/${role}/profile`,
     );
     if (response.status === 401 || response.status === 403)
       return clearSession(NextResponse.json({ user: null }));
@@ -28,10 +29,14 @@ export async function GET() {
         { status: 503 },
       );
     const json = await response.json();
-    const user =
-      role === "admin"
-        ? JSON.parse(cookieStore.get(SESSION.user)?.value || "null")
-        : json.data;
+    const user = json.data;
+    if (!user || user.role !== role || user.is_approved !== true)
+      return clearSession(
+        NextResponse.json(
+          { user: null },
+          { headers: { "Cache-Control": "no-store" } },
+        ),
+      );
     return NextResponse.json(
       { user },
       { headers: { "Cache-Control": "no-store" } },

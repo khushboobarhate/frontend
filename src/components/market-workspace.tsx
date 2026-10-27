@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useState, type FormEvent } from "react";
 import Image from "next/image";
 import {
   ArrowRight,
@@ -31,6 +31,7 @@ import {
   initiateCall,
   setAvailability,
 } from "@/lib/api/client";
+import { validText, decimal } from "@/lib/validation";
 import { useAuth } from "@/lib/auth/context";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type {
@@ -40,7 +41,7 @@ import type {
   UserProfile,
   UserRole,
 } from "@/types";
-import { Avatar } from "./admin-workspace";
+import { Avatar } from "./avatar";
 import { PasswordInput, PasswordRules, strongPassword } from "./auth-forms";
 import { EmptyState, Modal, Notice, Spinner } from "./ui";
 import { useResource } from "./use-resource";
@@ -197,7 +198,7 @@ export function CropPanel({
                 aria-label="Sort crops"
                 value={sort}
                 onChange={(event) => setSort(event.target.value)}
-                style={{ padding: "9px 10px", minHeight: 35, fontSize: 10 }}
+                style={{ padding: "9px 10px", minHeight: 35, fontSize: 14 }}
               >
                 <option value="recent">Recently listed</option>
                 <option value="low">Price: low to high</option>
@@ -473,7 +474,7 @@ function CropDialog({
           <dt>Listed price</dt>
           <dd style={{ fontSize: 22, fontWeight: 600 }}>
             {formatCurrency(Number(crop.price))}
-            <small style={{ fontSize: 10, marginLeft: 6 }}>
+            <small style={{ fontSize: 14, marginLeft: 6 }}>
               / {crop.quantity_unit}
             </small>
           </dd>
@@ -513,7 +514,7 @@ function CropDialog({
               <h3 style={{ fontSize: 14, fontWeight: 500 }}>
                 Let this farmer know you’re interested.
               </h3>
-              <p className="muted" style={{ marginTop: 7, fontSize: 10 }}>
+              <p className="muted" style={{ marginTop: 7, fontSize: 14 }}>
                 Choose your interest level and leave a note to start the
                 connection.
               </p>
@@ -645,6 +646,19 @@ export function CropUpload({
     setFields((current) => ({ ...current, [key]: value }));
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (!validText(fields.crop_name, 2, 150)) {
+      setError("Crop name must contain 2–150 characters.");
+      return;
+    }
+    if (
+      decimal(fields.quantity, 0.001, 3) === null ||
+      decimal(fields.price, 0, 2) === null
+    ) {
+      setError(
+        "Enter a valid quantity (up to 3 decimals) and price (up to 2 decimals), both at most 1,000,000,000.",
+      );
+      return;
+    }
     setBusy(true);
     setError("");
     const data = new FormData();
@@ -678,6 +692,7 @@ export function CropUpload({
             onChange={(event) => update("crop_name", event.target.value)}
             required
             placeholder="e.g. Fresh turmeric roots"
+            minLength={2}
             maxLength={150}
           />
         </label>
@@ -712,7 +727,8 @@ export function CropUpload({
               id="crop-quantity"
               type="number"
               min="0.001"
-              step="any"
+              max="1000000000"
+              step="0.001"
               required
               value={fields.quantity}
               onChange={(event) => update("quantity", event.target.value)}
@@ -725,6 +741,7 @@ export function CropUpload({
               id="crop-price"
               type="number"
               min="0"
+              max="1000000000"
               step="0.01"
               required
               value={fields.price}
@@ -772,6 +789,7 @@ export function CropUpload({
                     "Choose up to 10 JPEG, PNG, or WebP photos, each under 10 MB.",
                   );
                   event.target.value = "";
+                  setPhotos([]);
                   return;
                 }
                 setError("");
@@ -904,7 +922,7 @@ export function InterestsPanel({ role }: { role: MemberRole }) {
                   <div>
                     <h3>
                       {name}
-                      <span className="muted" style={{ fontSize: 9 }}>
+                      <span className="muted" style={{ fontSize: 14 }}>
                         {" "}
                         ·{" "}
                         {item.crop_name ||
@@ -964,19 +982,16 @@ export function InterestsPanel({ role }: { role: MemberRole }) {
 export function AccountPanel({ user }: { user: UserProfile }) {
   const auth = useAuth();
   const router = useRouter();
-  const [available, setAvailable] = useState(user.is_call_available !== false);
+  const available = user.is_call_available !== false;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  useEffect(() => {
-    setAvailable(user.is_call_available !== false);
-  }, [user.is_call_available]);
+
   const toggle = async () => {
     if (user.role === "admin") return;
     setBusy(true);
     setError("");
     try {
-      const result = await setAvailability(user.role, !available);
-      setAvailable(result.data.is_call_available);
+      await setAvailability(user.role, !available);
       await auth.refreshProfile();
     } catch (error) {
       setError(errorText(error));
@@ -997,19 +1012,23 @@ export function AccountPanel({ user }: { user: UserProfile }) {
                 : user.role === "farmer"
                   ? "Farmer community"
                   : "Buyer community"}{" "}
-              · <span style={{ color: "#8ea773" }}>Approved member</span>
+              · <span style={{ color: "#456b31" }}>Approved member</span>
             </p>
           </div>
         </div>
         <dl className="detail-grid">
           {[
             ["Email", user.email],
-            ["Phone", user.mobile_number],
-            ["State", user.state],
-            ["City / village", user.city],
-            ["Language", user.preferred_language],
-            ["Nationality", user.nationality],
-            ["Address", user.full_address],
+            ...(user.role !== "admin"
+              ? [
+                  ["Phone", user.mobile_number],
+                  ["State", user.state],
+                  ["City / village", user.city],
+                  ["Language", user.preferred_language],
+                  ["Nationality", user.nationality],
+                  ["Address", user.full_address],
+                ]
+              : []),
             ...(user.role === "farmer"
               ? [["Farm location", user.land_location]]
               : []),
@@ -1053,32 +1072,18 @@ export function AccountPanel({ user }: { user: UserProfile }) {
           </div>
         )}
       </section>
-      {user.role === "admin" ? (
-        <section className="panel">
-          <div className="panel-heading">
-            <div>
-              <h2>A little care for your account.</h2>
-              <p>
-                Administrator credentials are managed by your platform operator.
-              </p>
-            </div>
-            <ShieldCheck size={22} />
-          </div>
-          <p className="muted">
-            Keep your sign-in details private, and sign out when you’ve finished
-            reviewing applications on a shared device.
-          </p>
-        </section>
-      ) : (
-        <ChangePasswordPanel
-          role={user.role}
-          required={!!user.must_change_password}
-          onChanged={async () => {
-            await auth.logout();
-            router.replace(`/login?role=${user.role}&password=updated`);
-          }}
-        />
-      )}
+      <ChangePasswordPanel
+        role={user.role}
+        required={!!user.must_change_password}
+        onChanged={async () => {
+          await auth.logout();
+          router.replace(
+            user.role === "admin"
+              ? "/admin/login?password=updated"
+              : `/login?role=${user.role}&password=updated`,
+          );
+        }}
+      />
     </div>
   );
 }
@@ -1087,7 +1092,7 @@ function ChangePasswordPanel({
   required,
   onChanged,
 }: {
-  role: MemberRole;
+  role: UserRole;
   required: boolean;
   onChanged: () => Promise<void>;
 }) {
@@ -1173,10 +1178,12 @@ function ChangePasswordPanel({
             </>
           )}
         </button>
-        <Link className="text-link" href={`/forgot-password?role=${role}`}>
-          Forgot your current password?
-          <ArrowUpRight size={13} />
-        </Link>
+        {role !== "admin" && (
+          <Link className="text-link" href={`/forgot-password?role=${role}`}>
+            Forgot your current password?
+            <ArrowUpRight size={13} />
+          </Link>
+        )}
       </form>
     </section>
   );
