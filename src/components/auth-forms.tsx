@@ -18,13 +18,14 @@ import {
   Sprout,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { Link, useRouter } from "@/i18n/routing";
-import { useTranslations } from "next-intl";
+import { Link, useRouter, type Locale } from "@/i18n/routing";
+import { useTranslations, useLocale } from "next-intl";
 import { useAuth } from "@/lib/auth/context";
 import {
   forgotPassword,
   registerAccount,
   resetPassword,
+  updateProfile,
 } from "@/lib/api/client";
 import type { MemberRole, UserRole } from "@/types";
 import { fieldRules, registrationError, validEmail } from "@/lib/validation";
@@ -52,6 +53,7 @@ export function AuthShell({
   registration?: boolean;
   hideLanguage?: boolean;
 }) {
+  const t = useTranslations("Auth");
   return (
     <main className={`auth-page ${registration ? "auth-registration" : ""}`}>
       <aside className="auth-story">
@@ -73,22 +75,22 @@ export function AuthShell({
         <div className="auth-story-shade" />
         <Brand light />
         <div className="auth-story-copy">
-          <span className="eyebrow">ROOTED IN INDIA. GROWING TOGETHER.</span>
+          <span className="eyebrow">{t("story.eyebrow")}</span>
           <h2>
-            Good things
+            {t("story.title1")}
             <br />
-            begin with
+            {t("story.title2")}
             <br />
-            <em>connection.</em>
+            <em>{t("story.title3")}</em>
           </h2>
           <p>
-            For the hands that grow.
+            {t("story.p1")}
             <br />
-            For the people who believe in their harvest.
+            {t("story.p2")}
           </p>
           <div className="auth-story-bottom">
             <Leaf size={19} />
-            <span>Every root deserves its worth.</span>
+            <span>{t("story.badge")}</span>
           </div>
         </div>
       </aside>
@@ -96,14 +98,14 @@ export function AuthShell({
         <header className="auth-top">
           <Link href="/" className="back-link">
             <ArrowLeft size={15} />
-            Back to home
+            {t("backHome")}
           </Link>
           {!hideLanguage && <LanguageSwitch />}
         </header>
         <div className="auth-form-container">{children}</div>
         <footer className="auth-bottom">
           <ShieldCheck size={15} />
-          Thoughtful connections. Human-reviewed accounts.<span>सेतुमूल्य</span>
+          {t("story.footer")}<span>सेतुमूल्य</span>
         </footer>
       </section>
     </main>
@@ -143,7 +145,7 @@ export function PasswordInput({
   id,
   value,
   onChange,
-  label = "Password",
+  label,
   autoComplete = "current-password",
   required = true,
 }: {
@@ -154,10 +156,11 @@ export function PasswordInput({
   autoComplete?: string;
   required?: boolean;
 }) {
+  const t = useTranslations("Auth");
   const [visible, setVisible] = useState(false);
   return (
     <label className="field" htmlFor={id}>
-      <span>{label}</span>
+      <span>{label || t("password")}</span>
       <div className="input-icon">
         <LockKeyhole size={17} />
         <input
@@ -170,14 +173,14 @@ export function PasswordInput({
           maxLength={128}
           placeholder={
             autoComplete === "new-password"
-              ? "Create a strong password"
-              : "Enter your password"
+              ? t("createPasswordPlaceholder")
+              : t("enterPasswordPlaceholder")
           }
         />
         <button
           type="button"
           className="password-toggle"
-          aria-label={visible ? "Hide password" : "Show password"}
+          aria-label={visible ? t("hidePassword") : t("showPassword")}
           onClick={() => setVisible(!visible)}
         >
           {visible ? <EyeOff size={17} /> : <Eye size={17} />}
@@ -187,17 +190,18 @@ export function PasswordInput({
   );
 }
 export function PasswordRules({ value }: { value: string }) {
+  const t = useTranslations("Auth");
   const rules = [
     {
-      label: "12–128 characters",
+      label: t("ruleLength"),
       valid: value.length >= 12 && value.length <= 128,
     },
     {
-      label: "Upper & lowercase",
+      label: t("ruleCase"),
       valid: /[A-Z]/.test(value) && /[a-z]/.test(value),
     },
     {
-      label: "Number & symbol",
+      label: t("ruleNumberSymbol"),
       valid: /\d/.test(value) && /[^A-Za-z0-9]/.test(value),
     },
   ];
@@ -214,6 +218,7 @@ export function PasswordRules({ value }: { value: string }) {
 }
 export function LoginForm({ adminMode = false }: { adminMode?: boolean }) {
   const t = useTranslations("Auth");
+  const locale = useLocale();
   const params = useSearchParams();
   const router = useRouter();
   const auth = useAuth();
@@ -233,10 +238,36 @@ export function LoginForm({ adminMode = false }: { adminMode?: boolean }) {
     setError("");
     try {
       if (!validEmail(email.trim()))
-        throw new Error("Enter a valid email address.");
+        throw new Error(t("validEmailError"));
       const user = await auth.login(role, { email: email.trim(), password });
+      let targetLocale = locale as Locale;
+      let explicit: string | null = null;
+      try {
+        explicit = sessionStorage.getItem("sm_locale_explicit");
+      } catch {}
+      if (explicit && (explicit === "en" || explicit === "hi" || explicit === "gu")) {
+        targetLocale = explicit as Locale;
+        updateProfile(role, { preferred_language: targetLocale }).catch(() => {});
+        try {
+          sessionStorage.removeItem("sm_locale_explicit");
+        } catch {}
+      } else if (
+        user.preferred_language &&
+        (user.preferred_language === "en" ||
+          user.preferred_language === "hi" ||
+          user.preferred_language === "gu")
+      ) {
+        targetLocale = user.preferred_language as Locale;
+      } else if (targetLocale) {
+        updateProfile(role, { preferred_language: targetLocale }).catch(() => {});
+      }
+      document.cookie = `NEXT_LOCALE=${targetLocale}; path=/; max-age=31536000; SameSite=lax`;
+      try {
+        localStorage.setItem("sm_locale", targetLocale);
+      } catch {}
       router.push(
         user.must_change_password ? "/dashboard?view=account" : "/dashboard",
+        { locale: targetLocale },
       );
     } catch (error) {
       setError(errorText(error));
@@ -246,8 +277,8 @@ export function LoginForm({ adminMode = false }: { adminMode?: boolean }) {
   };
   return (
     <AuthShell>
-      <span className="eyebrow">A LITTLE CLOSER TO POSSIBILITY</span>
-      <h1>{adminMode ? "Administrator sign in" : t("welcome")}</h1>
+      <span className="eyebrow">{t("loginEyebrow")}</span>
+      <h1>{adminMode ? t("adminSignInTitle") : t("welcome")}</h1>
       <p className="form-subtitle">{t("loginDescription")}</p>
       {!adminMode && (
         <RolePicker
@@ -261,7 +292,7 @@ export function LoginForm({ adminMode = false }: { adminMode?: boolean }) {
       {error && <Notice>{error}</Notice>}
       {params.get("password") === "updated" && (
         <Notice kind="success">
-          Your password is updated. Sign in to keep growing.
+          {t("passwordUpdated")}
         </Notice>
       )}
       <form onSubmit={submit} className="form-stack">
@@ -294,7 +325,7 @@ export function LoginForm({ adminMode = false }: { adminMode?: boolean }) {
         )}
         <button className="button full-width" disabled={busy || auth.isLoading}>
           {busy ? (
-            <Spinner label="Signing you in…" />
+            <Spinner label={t("signingIn")} />
           ) : (
             <>
               {t("signIn")}
@@ -307,8 +338,8 @@ export function LoginForm({ adminMode = false }: { adminMode?: boolean }) {
         <ShieldCheck size={17} />
         <p>
           {role === "admin"
-            ? "For approved platform administrators."
-            : "Use the email and temporary password sent after approval. Your harvest, your network — all in one place."}
+            ? t("adminNote")
+            : t("memberNote")}
         </p>
       </div>
       {!adminMode && (
@@ -338,10 +369,14 @@ const blankRegistration = {
 };
 export function RegisterForm() {
   const t = useTranslations("Auth");
+  const locale = useLocale();
   const params = useSearchParams();
   const [role, setRole] = useState<MemberRole>(memberRole(params.get("role")));
   const [step, setStep] = useState(1);
-  const [fields, setFields] = useState(blankRegistration);
+  const [fields, setFields] = useState({
+    ...blankRegistration,
+    preferred_language: locale || "en",
+  });
   const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState("");
   const [busy, setBusy] = useState(false);
@@ -400,7 +435,7 @@ export function RegisterForm() {
     <label className="field" htmlFor={`register-${key}`}>
       <span>
         {label}
-        {!options.required && <small>Optional</small>}
+        {!options.required && <small>{t("optional")}</small>}
       </span>
       <input
         id={`register-${key}`}
@@ -437,42 +472,39 @@ export function RegisterForm() {
           <span className="success-mark">
             <CheckCircle2 size={43} strokeWidth={1.4} />
           </span>
-          <span className="eyebrow">A NEW BEGINNING</span>
+          <span className="eyebrow">{t("successEyebrow")}</span>
           <h1>
-            You’re one
+            {t("successTitle1")}
             <br />
-            <em>step closer.</em>
+            <em>{t("successTitle2")}</em>
           </h1>
           <p>
-            Thank you, {submitted.full_name}. Your {role} application is with
-            our team for review.
+            {t("successGreeting", { name: submitted.full_name, role: t(role) })}
           </p>
           <div className="success-details">
             <Mail size={21} />
             <div>
-              <strong>Keep an eye on your inbox</strong>
+              <strong>{t("successInboxTitle")}</strong>
               <p>
-                After approval, your login ID and temporary password will arrive
-                at <b>{submitted.email}</b>.
+                {t("successInboxDesc", { email: submitted.email })}
               </p>
             </div>
           </div>
           <div className="reference">
-            <span>APPLICATION REFERENCE</span>
+            <span>{t("referenceLabel")}</span>
             <code>{submitted.request_id}</code>
           </div>
           <Link href={`/login?role=${role}`} className="button full-width">
-            Back to sign in
+            {t("backToSignIn")}
             <ArrowRight size={18} />
           </Link>
           <p className="muted">
-            You can close this page. We’ll email you when your application has
-            been reviewed.
+            {t("successCloseNote")}
           </p>
         </div>
       ) : (
         <>
-          <span className="eyebrow">YOUR NEXT SEASON STARTS HERE</span>
+          <span className="eyebrow">{t("registerEyebrow")}</span>
           <h1>{t("registerTitle")}</h1>
           <p className="form-subtitle">{t("registerDescription")}</p>
           <RolePicker
@@ -497,7 +529,7 @@ export function RegisterForm() {
           <form className="form-stack" onSubmit={submit}>
             {step === 1 ? (
               <>
-                {field("full_name", t("fullName"), "Your full name", {
+                {field("full_name", t("fullName"), t("fullNamePlaceholder"), {
                   required: true,
                   autoComplete: "name",
                 })}
@@ -512,7 +544,7 @@ export function RegisterForm() {
                   autoComplete: "tel",
                 })}
                 <div className="form-grid">
-                  {field("age", t("age"), "Your age", { type: "number" })}
+                  {field("age", t("age"), t("agePlaceholder"), { type: "number" })}
                   <label className="field" htmlFor="register-language">
                     <span>{t("language")}</span>
                     <select
@@ -524,17 +556,13 @@ export function RegisterForm() {
                     >
                       <option value="en">English</option>
                       <option value="hi">हिंदी</option>
-                      <option value="mr">मराठी</option>
                       <option value="gu">ગુજરાતી</option>
                     </select>
                   </label>
                 </div>
                 <div className="form-note">
                   <Mail size={18} />
-                  <p>
-                    We’ll email your login details after approval. There’s no
-                    password to create right now.
-                  </p>
+                  <p>{t("emailNote")}</p>
                 </div>
                 <button className="button full-width">
                   {t("continue")}
@@ -544,16 +572,16 @@ export function RegisterForm() {
             ) : (
               <>
                 <div className="form-grid">
-                  {field("state", t("state"), "e.g. Maharashtra", {
+                  {field("state", t("state"), t("statePlaceholder"), {
                     required: true,
                     autoComplete: "address-level1",
                   })}
-                  {field("city", t("city"), "Your city or village", {
+                  {field("city", t("city"), t("cityPlaceholder"), {
                     required: true,
                     autoComplete: "address-level2",
                   })}
-                  {field("taluka", t("taluka"), "Taluka or tehsil")}
-                  {field("nationality", t("nationality"), "e.g. Indian")}
+                  {field("taluka", t("taluka"), t("talukaPlaceholder"))}
+                  {field("nationality", t("nationality"), t("nationalityPlaceholder"))}
                 </div>
                 <label className="field" htmlFor="register-address">
                   <span>{t("address")}</span>
@@ -566,7 +594,7 @@ export function RegisterForm() {
                       update("full_address", event.target.value)
                     }
                     required
-                    placeholder="House, street, village, and PIN code"
+                    placeholder={t("addressPlaceholder")}
                     minLength={10}
                     maxLength={500}
                   />
@@ -575,7 +603,7 @@ export function RegisterForm() {
                   field(
                     "land_location",
                     t("land"),
-                    "Village, plot number, or farm location",
+                    t("landPlaceholder"),
                     { required: true },
                   )}
                 <label className="photo-upload" htmlFor="register-photo">
@@ -592,9 +620,7 @@ export function RegisterForm() {
                           file.type,
                         )
                       ) {
-                        setError(
-                          "Choose a JPEG, PNG, or WebP photo under 5 MB.",
-                        );
+                        setError(t("photoUploadNote"));
                         event.target.value = "";
                         selectPhoto(null);
                         return;
@@ -618,19 +644,16 @@ export function RegisterForm() {
                   )}
                   <div>
                     <strong>
-                      {photo ? photo.name : "Add a profile photo"}
-                      <small>Optional</small>
+                      {photo ? photo.name : t("photoUploadLabel")}
+                      <small>{t("optional")}</small>
                     </strong>
-                    <p>JPEG, PNG, or WebP · Up to 5 MB</p>
+                    <p>{t("photoUploadHelp")}</p>
                   </div>
                   <ArrowUpRight size={18} />
                 </label>
                 <div className="form-note">
                   <ShieldCheck size={18} />
-                  <p>
-                    Your details go to our team for a personal review. Only
-                    approved members can access the marketplace.
-                  </p>
+                  <p>{t("reviewNote")}</p>
                 </div>
                 <div className="form-button-row">
                   <button
@@ -640,11 +663,11 @@ export function RegisterForm() {
                     disabled={busy}
                   >
                     <ArrowLeft size={17} />
-                    Back
+                    {t("back")}
                   </button>
                   <button className="button" disabled={busy}>
                     {busy ? (
-                      <Spinner label="Submitting…" />
+                      <Spinner label={t("submitting")} />
                     ) : (
                       <>
                         {t("submit")}
@@ -669,6 +692,7 @@ export function RegisterForm() {
   );
 }
 export function ForgotForm() {
+  const t = useTranslations("Auth");
   const params = useSearchParams();
   const [role, setRole] = useState<MemberRole>(memberRole(params.get("role")));
   const [email, setEmail] = useState("");
@@ -690,12 +714,12 @@ export function ForgotForm() {
   };
   return (
     <AuthShell>
-      <span className="eyebrow">LET’S GET YOU BACK TO GROWING</span>
-      <h1>{sent ? "Check your inbox." : "A fresh start."}</h1>
+      <span className="eyebrow">{t("forgotEyebrow")}</span>
+      <h1>{sent ? t("checkInbox") : t("freshStart")}</h1>
       <p className="form-subtitle">
         {sent
-          ? "If an approved account matches your email, a password reset link will be on its way. Check your spam folder too."
-          : "Forgot your password? Enter your registered email and we’ll send you a link to set a new one."}
+          ? t("checkInboxDesc")
+          : t("forgotPasswordDesc")}
       </p>
       {error && <Notice>{error}</Notice>}
       {!sent && (
@@ -706,7 +730,7 @@ export function ForgotForm() {
           />
           <form onSubmit={submit} className="form-stack">
             <label className="field" htmlFor="recovery-email">
-              <span>Registered email</span>
+              <span>{t("registeredEmail")}</span>
               <div className="input-icon">
                 <Mail size={18} />
                 <input
@@ -722,10 +746,10 @@ export function ForgotForm() {
             </label>
             <button className="button full-width" disabled={busy}>
               {busy ? (
-                <Spinner label="Sending your link…" />
+                <Spinner label={t("sendingLink")} />
               ) : (
                 <>
-                  Send reset link
+                  {t("sendResetLink")}
                   <ArrowRight size={18} />
                 </>
               )}
@@ -735,12 +759,13 @@ export function ForgotForm() {
       )}
       <Link href={`/login?role=${role}`} className="back-link form-back">
         <ArrowLeft size={15} />
-        Back to sign in
+        {t("backToSignIn")}
       </Link>
     </AuthShell>
   );
 }
 export function ResetForm() {
+  const t = useTranslations("Auth");
   const [role, setRole] = useState<MemberRole>("farmer");
   const [token, setToken] = useState("");
   const [checked, setChecked] = useState(false);
@@ -770,13 +795,11 @@ export function ResetForm() {
     event.preventDefault();
     setError("");
     if (!strongPassword(password)) {
-      setError(
-        "Use 12–128 characters, with upper and lowercase letters, a number, and a symbol.",
-      );
+      setError(t("rulesError"));
       return;
     }
     if (password !== confirmation) {
-      setError("Your passwords don’t match yet. Please check both fields.");
+      setError(t("mismatchError"));
       return;
     }
     setBusy(true);
@@ -791,10 +814,10 @@ export function ResetForm() {
   };
   return (
     <AuthShell hideLanguage>
-      <span className="eyebrow">NEW PASSWORD. NEW POSSIBILITIES.</span>
-      <h1>Make it yours.</h1>
+      <span className="eyebrow">{t("resetEyebrow")}</span>
+      <h1>{t("resetTitle")}</h1>
       <p className="form-subtitle">
-        Choose a strong password to get back to your SetuMoolya community.
+        {t("resetSubtitle")}
       </p>
       {error && <Notice>{error}</Notice>}
       {!checked ? (
@@ -802,11 +825,10 @@ export function ResetForm() {
       ) : !token ? (
         <>
           <Notice kind="info">
-            This reset link is missing or has already been opened. Request a
-            fresh link to continue.
+            {t("linkMissing")}
           </Notice>
           <Link href="/forgot-password" className="button full-width">
-            Request a new link
+            {t("requestNewLink")}
             <ArrowRight size={17} />
           </Link>
         </>
@@ -814,7 +836,7 @@ export function ResetForm() {
         <form onSubmit={submit} className="form-stack">
           <PasswordInput
             id="new-password"
-            label="New password"
+            label={t("newPassword")}
             value={password}
             onChange={setPassword}
             autoComplete="new-password"
@@ -822,17 +844,17 @@ export function ResetForm() {
           <PasswordRules value={password} />
           <PasswordInput
             id="confirm-password"
-            label="Confirm new password"
+            label={t("confirmPassword")}
             value={confirmation}
             onChange={setConfirmation}
             autoComplete="new-password"
           />
           <button className="button full-width" disabled={busy}>
             {busy ? (
-              <Spinner label="Updating password…" />
+              <Spinner label={t("updating")} />
             ) : (
               <>
-                Set new password
+                {t("updatePassword")}
                 <ArrowRight size={18} />
               </>
             )}

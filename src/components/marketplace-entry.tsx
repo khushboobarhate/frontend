@@ -2,65 +2,63 @@
 import { useEffect } from "react";
 import Image from "next/image";
 import { ArrowRight, ArrowUpRight, Check, ShieldCheck } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/routing";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/context";
 import { SiteHeader, Footer } from "./site-header";
 import { Botanical } from "./ui";
+
 export function MarketplaceEntry() {
   const { user } = useAuth();
+  const t = useTranslations("MarketplaceEntry");
   const router = useRouter();
   const params = useSearchParams();
   const search = params.get("search") || "";
+
   useEffect(() => {
     if (user)
       router.replace(
         `/dashboard?view=${user.role === "buyer" ? "marketplace" : "crops"}${search ? `&search=${encodeURIComponent(search)}` : ""}`,
       );
   }, [user, router, search]);
+
   return (
     <>
       <SiteHeader />
       <main className="container marketplace-entry">
         <div>
-          <span className="eyebrow">THE SETUMOOLYA MARKETPLACE</span>
+          <span className="eyebrow">{t("eyebrow")}</span>
           <h1>
-            A good harvest.
+            {t("title1")}
             <br />
-            An even better
+            {t("title2")}
             <br />
-            <em>connection.</em>
+            <em>{t("title3")}</em>
           </h1>
-          <p>
-            Meet the people behind the produce. Explore crop listings, discover
-            something worth sourcing, and start a direct conversation with an
-            approved farmer.
-          </p>
+          <p>{t("description")}</p>
           <div className="entry-checks">
             <span>
-              <Check /> Browse organic and conventional crops
+              <Check /> {t("check1")}
             </span>
             <span>
-              <Check /> See quantities, photos, and listed prices
+              <Check /> {t("check2")}
             </span>
             <span>
-              <Check /> Express interest and connect directly
+              <Check /> {t("check3")}
             </span>
           </div>
           <div className="hero-actions">
             <Link href="/login?role=buyer" className="button">
-              Sign in to explore
+              {t("signInButton")}
               <ArrowUpRight size={19} />
             </Link>
             <Link href="/register?role=buyer" className="button button-outline">
-              Join as a buyer
+              {t("joinButton")}
               <ArrowRight size={18} />
             </Link>
           </div>
-          <small className="muted">
-            Our marketplace is open to approved members. New here? Registration
-            is the first step.
-          </small>
+          <small className="muted">{t("notice")}</small>
         </div>
         <div className="entry-image">
           <Image
@@ -70,11 +68,9 @@ export function MarketplaceEntry() {
             priority
             sizes="(max-width: 760px) 95vw, 45vw"
           />
-          <span>
+          <span style={{ whiteSpace: "pre-line" }}>
             <ShieldCheck size={22} />
-            Better sourcing starts
-            <br />
-            with people you can meet.
+            {t("badge")}
           </span>
         </div>
         <Botanical className="entry-botanical" />

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, type ReactNode } from "react";
 import { ArrowRight, LoaderCircle, Sprout, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 
 export function Brand({
@@ -42,6 +43,7 @@ export function Brand({
     </Link>
   );
 }
+
 export function Botanical({ className = "" }: { className?: string }) {
   return (
     <svg
@@ -56,6 +58,7 @@ export function Botanical({ className = "" }: { className?: string }) {
     </svg>
   );
 }
+
 export function FieldLines() {
   return (
     <svg viewBox="0 0 380 130" fill="none" aria-hidden="true">
@@ -71,14 +74,17 @@ export function FieldLines() {
     </svg>
   );
 }
-export function Spinner({ label = "Loading…" }: { label?: string }) {
+
+export function Spinner({ label }: { label?: string }) {
+  const t = useTranslations("Common");
   return (
     <span className="loading-line" role="status">
       <LoaderCircle size={18} className="spin" />
-      {label}
+      {label ?? t("loading")}
     </span>
   );
 }
+
 export function Notice({
   children,
   kind = "error",
@@ -95,6 +101,7 @@ export function Notice({
     </div>
   );
 }
+
 export function EmptyState({
   title,
   description,
@@ -115,6 +122,7 @@ export function EmptyState({
     </div>
   );
 }
+
 export function Modal({
   title,
   children,
@@ -126,6 +134,7 @@ export function Modal({
   onClose: () => void;
   wide?: boolean;
 }) {
+  const t = useTranslations("Common");
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const node = dialog.current;
@@ -157,7 +166,7 @@ export function Modal({
         </div>
         <button
           className="icon-button"
-          aria-label="Close dialog"
+          aria-label={t("closeDialog")}
           onClick={onClose}
         >
           <X size={22} />
@@ -167,6 +176,7 @@ export function Modal({
     </dialog>
   );
 }
+
 export function ArrowLink({
   href,
   children,

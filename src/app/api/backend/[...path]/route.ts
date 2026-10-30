@@ -11,6 +11,7 @@ import type { UserProfile } from "@/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
 async function proxy(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> },
@@ -45,12 +46,16 @@ async function proxy(
         { success: false, message: "Use JSON or a multipart form." },
         { status: 415 },
       );
+
     const cropUpload =
       request.method === "POST" && path.join("/") === "api/farmer/crops";
-    if (cropUpload) {
+    const isAiUpload =
+      request.method === "POST" && path.join("/").startsWith("api/farmer/ai");
+
+    if (cropUpload || isAiUpload) {
       if (!(await cookies()).has(SESSION.token))
         return NextResponse.json(
-          { success: false, message: "Sign in before uploading crops." },
+          { success: false, message: "Sign in before using this feature." },
           { status: 401 },
         );
       const check = await backend("/api/farmer/profile");
@@ -63,10 +68,11 @@ async function proxy(
           { status: check.status },
         );
     }
+
     let body: ArrayBuffer | undefined;
     if (request.method !== "GET" && request.method !== "HEAD") {
       const maximum = type.startsWith("multipart/form-data")
-        ? (cropUpload ? 105 : 6) * 1024 * 1024
+        ? (cropUpload || isAiUpload ? 105 : 6) * 1024 * 1024
         : 64 * 1024;
       const reader = request.body?.getReader();
       const chunks: Uint8Array[] = [];
@@ -94,9 +100,11 @@ async function proxy(
       }
       body = merged.buffer;
     }
+
     const headers = new Headers();
     if (request.headers.has("content-type"))
       headers.set("content-type", request.headers.get("content-type")!);
+
     const response = await backend(
       `/${path.map(encodeURIComponent).join("/")}${request.nextUrl.search}`,
       {
@@ -107,6 +115,20 @@ async function proxy(
           : {}),
       },
     );
+
+    // Audio stream support (e.g. /api/farmer/ai/tts)
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("audio/")) {
+      const audioBuffer = await response.arrayBuffer();
+      return new NextResponse(audioBuffer, {
+        status: response.status,
+        headers: {
+          "Content-Type": contentType,
+          "Cache-Control": response.headers.get("cache-control") || "no-store",
+        },
+      });
+    }
+
     const json = await response.json();
     if (
       response.ok &&
@@ -158,6 +180,7 @@ async function proxy(
     );
   }
 }
+
 export {
   proxy as GET,
   proxy as POST,

@@ -1,11 +1,12 @@
 "use client";
 // This file is part of the Setu Moolya project, which is licensed under the MIT License.
-import { useCallback, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Image from "next/image";
 import {
   ArrowRight,
   ArrowUpRight,
   Camera,
+  Clock,
   Heart,
   Leaf,
   MapPin,
@@ -18,14 +19,18 @@ import {
   Star,
   Trash2,
   Wheat,
+  X,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/routing";
 import {
   assetUrl,
   changePassword,
+  createCallRequest,
   createCrop,
   deleteCrop,
   expressInterest,
+  getBuyerCallRequests,
   getCrop,
   getCrops,
   getInterests,
@@ -36,6 +41,7 @@ import { validText, decimal } from "@/lib/validation";
 import { useAuth } from "@/lib/auth/context";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type {
+  CallRequest,
   CallResult,
   Crop,
   MemberRole,
@@ -46,8 +52,10 @@ import { Avatar } from "./avatar";
 import { PasswordInput, PasswordRules, strongPassword } from "./auth-forms";
 import { EmptyState, Modal, Notice, Spinner } from "./ui";
 import { useResource } from "./use-resource";
+
 const errorText = (error: unknown) =>
   error instanceof Error ? error.message : "Please try again.";
+
 export function CropPhoto({
   crop,
   detail = false,
@@ -55,6 +63,7 @@ export function CropPhoto({
   crop: Crop;
   detail?: boolean;
 }) {
+  const tCommon = useTranslations("Common");
   const url = assetUrl(crop.photos?.[0]);
   return url ? (
     <Image
@@ -71,10 +80,11 @@ export function CropPhoto({
   ) : (
     <div className="crop-photo-placeholder">
       <Wheat size={detail ? 60 : 36} strokeWidth={1} />
-      <span>PHOTO NOT PROVIDED</span>
+      <span>{tCommon("notProvided")}</span>
     </div>
   );
 }
+
 export function CropPanel({
   role,
   initialSearch = "",
@@ -84,6 +94,8 @@ export function CropPanel({
   initialSearch?: string;
   overview?: boolean;
 }) {
+  const t = useTranslations("Market");
+  const tCommon = useTranslations("Common");
   const [search, setSearch] = useState(initialSearch);
   const [query, setQuery] = useState(initialSearch);
   const [type, setType] = useState("");
@@ -116,6 +128,7 @@ export function CropPanel({
           : new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );
   const shown = overview ? crops.slice(0, 3) : crops;
+
   return (
     <>
       {message && <Notice kind="success">{message}</Notice>}
@@ -124,15 +137,15 @@ export function CropPanel({
           <div>
             <h2>
               {role === "farmer"
-                ? "Your harvest, ready for its next chapter"
+                ? t("crops.farmerTitle")
                 : role === "admin"
-                  ? "Available crops across the platform"
-                  : "Find something worth connecting over"}
+                  ? t("crops.allCrops")
+                  : t("crops.buyerTitle")}
             </h2>
             <p>
               {role === "farmer"
-                ? "Every listing is a new opportunity to meet a buyer."
-                : "Real listings. Farmer-set prices. Direct conversations."}
+                ? t("crops.farmerSubtitle")
+                : t("crops.buyerSubtitle")}
             </p>
           </div>
           <div style={{ display: "flex", gap: 9 }}>
@@ -142,12 +155,12 @@ export function CropPanel({
                 onClick={() => setUpload(true)}
               >
                 <Plus size={15} />
-                List a harvest
+                {t("crops.listHarvest")}
               </button>
             )}
             <button
               className="icon-button"
-              aria-label="Refresh crops"
+              aria-label={t("crops.searchAria")}
               onClick={result.reload}
             >
               <RefreshCw size={15} />
@@ -158,9 +171,9 @@ export function CropPanel({
           <div className="toolbar">
             <div className="filter-tabs">
               {[
-                { value: "", label: "All harvests" },
-                { value: "organic", label: "Organic" },
-                { value: "inorganic", label: "Conventional" },
+                { value: "", label: t("crops.allCrops") },
+                { value: "organic", label: t("crops.organic") },
+                { value: "inorganic", label: t("crops.conventional") },
               ].map((option) => (
                 <button
                   className={type === option.value ? "selected" : ""}
@@ -180,30 +193,34 @@ export function CropPanel({
             >
               <Search />
               <input
-                aria-label="Search crops"
+                aria-label={t("crops.searchAria")}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search crops…"
+                placeholder={t("crops.searchPlaceholder")}
               />
               <button
                 type="submit"
                 className="table-action"
-                aria-label="Search"
+                aria-label={tCommon("search")}
               >
                 <ArrowRight size={14} />
               </button>
             </form>
             <label className="field">
-              <span className="sr-only">Sort crops</span>
+              <span className="sr-only">{tCommon("search")}</span>
               <select
-                aria-label="Sort crops"
+                aria-label={tCommon("search")}
                 value={sort}
                 onChange={(event) => setSort(event.target.value)}
                 style={{ padding: "9px 10px", minHeight: 35, fontSize: 14 }}
               >
-                <option value="recent">Recently listed</option>
-                <option value="low">Price: low to high</option>
-                <option value="high">Price: high to low</option>
+                <option value="recent">{tCommon("date")}</option>
+                <option value="low">
+                  {tCommon("per")} {tCommon("kg")}: ↓
+                </option>
+                <option value="high">
+                  {tCommon("per")} {tCommon("kg")}: ↑
+                </option>
               </select>
             </label>
           </div>
@@ -212,29 +229,29 @@ export function CropPanel({
           <Notice>
             {result.error}
             <button className="text-link" onClick={result.reload}>
-              Try again
+              {tCommon("tryAgain")}
               <RefreshCw size={13} />
             </button>
           </Notice>
         ) : result.isLoading ? (
           <div className="workspace-loading">
-            <Spinner label="Gathering the latest harvests…" />
+            <Spinner label={tCommon("loading")} />
           </div>
         ) : !shown.length ? (
           <EmptyState
             title={
               query || type
-                ? "A different season, perhaps?"
+                ? t("crops.noSearchTitle")
                 : role === "farmer"
-                  ? "Every harvest starts somewhere."
-                  : "The next harvest is on its way."
+                  ? t("crops.farmerEmptyTitle")
+                  : t("crops.buyerEmptyTitle")
             }
             description={
               query || type
-                ? "Try a different crop name or clear your filters."
+                ? t("crops.noSearchDesc")
                 : role === "farmer"
-                  ? "Add your first crop listing, share what you’ve grown, and let new connections find you."
-                  : "There are no available crop listings yet. Check back as farmers add their produce."
+                  ? t("crops.farmerEmptyDesc")
+                  : t("crops.buyerEmptyDesc")
             }
           >
             {role === "farmer" && (
@@ -242,7 +259,7 @@ export function CropPanel({
                 className="button button-small"
                 onClick={() => setUpload(true)}
               >
-                List your first harvest
+                {t("crops.listHarvest")}
                 <Plus size={16} />
               </button>
             )}
@@ -255,7 +272,7 @@ export function CropPanel({
                   setType("");
                 }}
               >
-                Clear filters
+                {tCommon("cancel")}
               </button>
             )}
           </EmptyState>
@@ -266,7 +283,9 @@ export function CropPanel({
                 <div className="crop-card-image">
                   <CropPhoto crop={crop} />
                   <span className="badge">
-                    {crop.crop_type === "organic" ? "Organic" : "Conventional"}
+                    {crop.crop_type === "organic"
+                      ? t("crops.organic")
+                      : t("crops.conventional")}
                   </span>
                 </div>
                 <div className="crop-card-body">
@@ -277,11 +296,10 @@ export function CropPanel({
                       ? [crop.farmer.city, crop.farmer.state]
                           .filter(Boolean)
                           .join(", ") ||
-                        crop.farmer.full_name ||
-                        "Farmer listing"
+                        t("crops.by", { name: crop.farmer.full_name || "" })
                       : role === "farmer"
-                        ? "Your crop listing"
-                        : "Farmer listing"}
+                        ? t("crops.farmerTitle")
+                        : t("crops.buyerTitle")}
                   </div>
                   <div className="crop-card-price">
                     <div>
@@ -289,22 +307,27 @@ export function CropPanel({
                       <small>/ {crop.quantity_unit}</small>
                     </div>
                     <span>
-                      {Number(crop.quantity).toLocaleString("en-IN")}{" "}
-                      {crop.quantity_unit} available
+                      {t("crops.quantityAvailable", {
+                        quantity: Number(crop.quantity).toLocaleString(),
+                        unit: crop.quantity_unit || "kg",
+                      })}
                     </span>
                   </div>
                   <div className="crop-card-footer">
                     <span>
                       <Star />
                       {crop.total_ratings
-                        ? `${crop.average_rating || 0} · ${crop.total_ratings} ${crop.total_ratings === 1 ? "rating" : "ratings"}`
-                        : "A fresh connection"}
+                        ? t("crops.ratingsSummary", {
+                            rating: crop.average_rating || 0,
+                            count: crop.total_ratings,
+                          })
+                        : t("crops.noRatings")}
                     </span>
                     <button
                       className="button button-outline"
                       onClick={() => setSelected(crop)}
                     >
-                      View harvest
+                      {t("crops.viewHarvest")}
                       <ArrowUpRight size={14} />
                     </button>
                   </div>
@@ -319,7 +342,7 @@ export function CropPanel({
             href={`/dashboard?view=${role === "buyer" ? "marketplace" : "crops"}`}
             style={{ marginTop: 20 }}
           >
-            See all harvests
+            {t("crops.viewHarvest")}
             <ArrowRight size={15} />
           </Link>
         )}
@@ -329,8 +352,8 @@ export function CropPanel({
           crop={selected}
           role={role}
           onClose={() => setSelected(null)}
-          onUpdated={(message) => {
-            setMessage(message);
+          onUpdated={(msg) => {
+            setMessage(msg);
             result.reload();
           }}
         />
@@ -339,9 +362,7 @@ export function CropPanel({
         <CropUpload
           onClose={() => setUpload(false)}
           onSaved={() => {
-            setMessage(
-              "Your harvest is listed. Here’s to its next connection.",
-            );
+            setMessage(t("upload.success"));
             setUpload(false);
             result.reload();
           }}
@@ -350,6 +371,7 @@ export function CropPanel({
     </>
   );
 }
+
 function CropDialog({
   crop: initial,
   role,
@@ -361,6 +383,8 @@ function CropDialog({
   onClose: () => void;
   onUpdated: (message: string) => void;
 }) {
+  const t = useTranslations("Market");
+  const tCommon = useTranslations("Common");
   const fetcher = useCallback(
     async () =>
       role === "admin"
@@ -378,16 +402,67 @@ function CropDialog({
   const [notice, setNotice] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [phone, setPhone] = useState<CallResult | null>(null);
+  const [callRequest, setCallRequest] = useState<CallRequest | null>(null);
+  const [requestNotice, setRequestNotice] = useState("");
+
+  useEffect(() => {
+    if (role === "buyer") {
+      getBuyerCallRequests()
+        .then((res) => {
+          if (res.success && res.data) {
+            const found = res.data.find(
+              (r) =>
+                r.crop_id === crop.id ||
+                r.farmer_id === (crop.farmer?.id || crop.farmer_id),
+            );
+            if (found) {
+              setCallRequest(found);
+              if (found.status === "approved" && found.farmer?.phone) {
+                setPhone({
+                  receiver_name:
+                    found.farmer.full_name || crop.farmer?.full_name || "Farmer",
+                  receiver_phone: found.farmer.phone,
+                  receiver_role: "farmer",
+                  call_status: "permitted",
+                });
+              }
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [crop.id, crop.farmer?.id, crop.farmer_id, crop.farmer?.full_name, role]);
+
+  const requestCall = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      const response = await createCallRequest({
+        farmer_id: crop.farmer?.id || crop.farmer_id,
+        crop_id: crop.id,
+        buyer_note: notes || undefined,
+      });
+      setCallRequest(response.data);
+      setRequestNotice(
+        t("call.requestSent") ||
+          "Call request sent to farmer! Contact details will be revealed once approved.",
+      );
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const saveInterest = async (event: FormEvent) => {
     event.preventDefault();
     setBusy(true);
     setError("");
     try {
       const response = await expressInterest(crop.id, rating, notes);
-      setNotice(
-        response.message || "Your interest has been shared with the farmer.",
-      );
-      onUpdated("Your interest has been shared with the farmer.");
+      const msg = response.message || t("interest.success");
+      setNotice(msg);
+      onUpdated(msg);
       result.reload();
     } catch (error) {
       setError(errorText(error));
@@ -395,28 +470,13 @@ function CropDialog({
       setBusy(false);
     }
   };
-  const call = async () => {
-    setBusy(true);
-    setError("");
-    try {
-      const response = await initiateCall(
-        "buyer",
-        crop.farmer?.id || crop.farmer_id || "",
-        crop.id,
-      );
-      setPhone(response.data);
-    } catch (error) {
-      setError(errorText(error));
-    } finally {
-      setBusy(false);
-    }
-  };
+
   const remove = async () => {
     setBusy(true);
     setError("");
     try {
       await deleteCrop(crop.id);
-      onUpdated("The crop listing was removed.");
+      onUpdated(t("crops.deleteListing"));
       onClose();
     } catch (error) {
       setError(errorText(error));
@@ -424,7 +484,9 @@ function CropDialog({
       setBusy(false);
     }
   };
+
   const url = assetUrl(crop.photos?.[image]);
+
   return (
     <Modal
       title={crop.crop_name}
@@ -453,7 +515,7 @@ function CropDialog({
           {crop.photos.map((photo, index) => (
             <button
               key={photo}
-              aria-label={`View crop photo ${index + 1}`}
+              aria-label={`Photo ${index + 1}`}
               className={image === index ? "selected" : ""}
               onClick={() => setImage(index)}
             >
@@ -472,7 +534,7 @@ function CropDialog({
       )}
       <dl className="detail-grid">
         <div>
-          <dt>Listed price</dt>
+          <dt>{t("upload.price")}</dt>
           <dd style={{ fontSize: 22, fontWeight: 600 }}>
             {formatCurrency(Number(crop.price))}
             <small style={{ fontSize: 14, marginLeft: 6 }}>
@@ -481,22 +543,27 @@ function CropDialog({
           </dd>
         </div>
         <div>
-          <dt>Available quantity</dt>
+          <dt>{t("upload.quantity")}</dt>
           <dd>
-            {Number(crop.quantity).toLocaleString("en-IN")} {crop.quantity_unit}
+            {Number(crop.quantity).toLocaleString()}{" "}
+            {crop.quantity_unit}
           </dd>
         </div>
         <div>
-          <dt>Growing method</dt>
-          <dd>{crop.crop_type === "organic" ? "Organic" : "Conventional"}</dd>
+          <dt>{t("upload.cropType")}</dt>
+          <dd>
+            {crop.crop_type === "organic"
+              ? t("crops.organic")
+              : t("crops.conventional")}
+          </dd>
         </div>
         <div>
-          <dt>Listed</dt>
+          <dt>{tCommon("date")}</dt>
           <dd>{formatDate(crop.created_at)}</dd>
         </div>
         {crop.farmer && (
           <div className="full-span">
-            <dt>From the farmer</dt>
+            <dt>{t("interestsPanel.farmerCol")}</dt>
             <dd>
               {crop.farmer.full_name} ·{" "}
               {[crop.farmer.city, crop.farmer.state].filter(Boolean).join(", ")}
@@ -513,21 +580,20 @@ function CropDialog({
           <form onSubmit={saveInterest} className="form-stack">
             <div>
               <h3 style={{ fontSize: 14, fontWeight: 500 }}>
-                Let this farmer know you’re interested.
+                {t("interest.title")}
               </h3>
               <p className="muted" style={{ marginTop: 7, fontSize: 14 }}>
-                Choose your interest level and leave a note to start the
-                connection.
+                {t("interest.subtitle")}
               </p>
               <div
                 className="star-picker"
                 role="group"
-                aria-label="Interest rating"
+                aria-label={t("interest.ratingLabel")}
               >
                 {[1, 2, 3, 4, 5].map((value) => (
                   <button
                     type="button"
-                    aria-label={`${value} ${value === 1 ? "star" : "stars"}`}
+                    aria-label={`${value} / 5`}
                     aria-pressed={rating === value}
                     className={rating >= value ? "selected" : ""}
                     key={value}
@@ -540,7 +606,7 @@ function CropDialog({
             </div>
             <label className="field" htmlFor="interest-notes">
               <span>
-                A note for the farmer<small>Optional</small>
+                {t("interest.notesLabel")}
               </span>
               <textarea
                 id="interest-notes"
@@ -548,31 +614,76 @@ function CropDialog({
                 onChange={(event) => setNotes(event.target.value)}
                 rows={3}
                 maxLength={2000}
-                placeholder="Tell them a little about what you’re looking for."
+                placeholder={t("interest.notesPlaceholder")}
               />
             </label>
             <button className="button" disabled={!rating || busy}>
               {busy ? (
-                <Spinner label="Saving…" />
+                <Spinner label={t("interest.submitting")} />
               ) : (
                 <>
-                  Share my interest
+                  {t("interest.submitButton")}
                   <Heart size={16} />
                 </>
               )}
             </button>
           </form>
-          <div className="dialog-actions">
-            <button
-              className="button button-outline"
-              disabled={busy || crop.farmer?.is_call_available === false}
-              onClick={() => void call()}
-            >
-              <Phone size={15} />
-              {crop.farmer?.is_call_available === false
-                ? "Farmer is currently unavailable"
-                : "Connect with this farmer"}
-            </button>
+          <div className="dialog-actions" style={{ flexDirection: "column", alignItems: "stretch", gap: 10 }}>
+            {callRequest?.status === "pending" ? (
+              <div
+                style={{
+                  padding: "10px 14px",
+                  background: "#fef3c7",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  color: "#92400e",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <Clock size={16} />
+                <span>
+                  {t("call.requestPendingNotice") ||
+                    "Call request pending farmer approval. Contact details will be revealed once accepted."}
+                </span>
+              </div>
+            ) : callRequest?.status === "rejected" ? (
+              <div
+                style={{
+                  padding: "10px 14px",
+                  background: "#fee2e2",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  color: "#991b1b",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <X size={16} />
+                <span>
+                  {t("call.requestDeclinedNotice") ||
+                    "Farmer has declined this call request."}
+                </span>
+              </div>
+            ) : !phone ? (
+              <button
+                className="button button-lime"
+                disabled={busy || crop.farmer?.is_call_available === false}
+                onClick={() => void requestCall()}
+              >
+                <Phone size={15} />
+                {crop.farmer?.is_call_available === false
+                  ? t("call.availabilityOff")
+                  : t("crops.requestCall") || "Request Call with Farmer"}
+              </button>
+            ) : null}
+            {requestNotice && (
+              <p style={{ fontSize: 12, color: "#166534", margin: 0 }}>
+                {requestNotice}
+              </p>
+            )}
           </div>
           {phone && <PhoneResult result={phone} />}
         </>
@@ -584,7 +695,9 @@ function CropDialog({
               className="button button-outline"
               href="/dashboard?view=interests"
             >
-              See buyer interests
+              {t("crops.interestedBuyersCount", {
+                count: crop.interested_buyers_count || 0,
+              })}
               <ArrowUpRight size={15} />
             </Link>
             <button
@@ -593,14 +706,13 @@ function CropDialog({
               disabled={busy}
             >
               <Trash2 size={14} />
-              Remove listing
+              {t("crops.deleteListing")}
             </button>
           </div>
           {deleting && (
             <div style={{ marginTop: 20 }}>
               <Notice kind="info">
-                Remove this listing? Buyers will no longer see it in the
-                marketplace.
+                {t("crops.deleteListingWarning")}
               </Notice>
               <div className="form-button-row">
                 <button
@@ -608,14 +720,18 @@ function CropDialog({
                   disabled={busy}
                   onClick={() => void remove()}
                 >
-                  {busy ? <Spinner label="Removing…" /> : "Remove this listing"}
+                  {busy ? (
+                    <Spinner label={t("crops.deleting")} />
+                  ) : (
+                    t("crops.deleteListing")
+                  )}
                 </button>
                 <button
                   className="button button-outline"
                   disabled={busy}
                   onClick={() => setDeleting(false)}
                 >
-                  Keep it
+                  {tCommon("cancel")}
                 </button>
               </div>
             </div>
@@ -625,6 +741,7 @@ function CropDialog({
     </Modal>
   );
 }
+
 export function CropUpload({
   onClose,
   onSaved,
@@ -632,6 +749,8 @@ export function CropUpload({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("Market");
+  const tCommon = useTranslations("Common");
   const [fields, setFields] = useState({
     crop_name: "",
     crop_type: "organic",
@@ -645,6 +764,7 @@ export function CropUpload({
   const [error, setError] = useState("");
   const update = (key: keyof typeof fields, value: string) =>
     setFields((current) => ({ ...current, [key]: value }));
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!validText(fields.crop_name, 2, 150)) {
@@ -676,9 +796,10 @@ export function CropUpload({
       setBusy(false);
     }
   };
+
   return (
     <Modal
-      title="Give your harvest a home."
+      title={t("upload.title")}
       onClose={() => {
         if (!busy) onClose();
       }}
@@ -686,44 +807,44 @@ export function CropUpload({
       {error && <Notice>{error}</Notice>}
       <form className="form-stack" onSubmit={submit}>
         <label className="field" htmlFor="crop-name">
-          <span>What have you grown?</span>
+          <span>{t("upload.cropName")}</span>
           <input
             id="crop-name"
             value={fields.crop_name}
             onChange={(event) => update("crop_name", event.target.value)}
             required
-            placeholder="e.g. Fresh turmeric roots"
+            placeholder={t("upload.cropNamePlaceholder")}
             minLength={2}
             maxLength={150}
           />
         </label>
         <div className="form-grid">
           <label className="field" htmlFor="crop-type">
-            <span>Growing method</span>
+            <span>{t("upload.cropType")}</span>
             <select
               id="crop-type"
               value={fields.crop_type}
               onChange={(event) => update("crop_type", event.target.value)}
             >
-              <option value="organic">Organic</option>
-              <option value="inorganic">Conventional</option>
+              <option value="organic">{t("upload.organicOption")}</option>
+              <option value="inorganic">{t("upload.inorganicOption")}</option>
             </select>
           </label>
           <label className="field" htmlFor="crop-unit">
-            <span>Unit</span>
+            <span>{t("upload.unit")}</span>
             <select
               id="crop-unit"
               value={fields.quantity_unit}
               onChange={(event) => update("quantity_unit", event.target.value)}
             >
-              <option value="kg">Kilogram (kg)</option>
-              <option value="quintal">Quintal</option>
-              <option value="tonne">Tonne</option>
-              <option value="gram">Gram</option>
+              <option value="kg">{tCommon("kg")}</option>
+              <option value="quintal">{tCommon("quintal")}</option>
+              <option value="tonne">{tCommon("tonne")}</option>
+              <option value="gram">{tCommon("gram")}</option>
             </select>
           </label>
           <label className="field" htmlFor="crop-quantity">
-            <span>Quantity available</span>
+            <span>{t("upload.quantity")}</span>
             <input
               id="crop-quantity"
               type="number"
@@ -733,11 +854,11 @@ export function CropUpload({
               required
               value={fields.quantity}
               onChange={(event) => update("quantity", event.target.value)}
-              placeholder="e.g. 250"
+              placeholder={t("upload.quantityPlaceholder")}
             />
           </label>
           <label className="field" htmlFor="crop-price">
-            <span>Price per {fields.quantity_unit} (₹)</span>
+            <span>{t("upload.price")}</span>
             <input
               id="crop-price"
               type="number"
@@ -747,19 +868,17 @@ export function CropUpload({
               required
               value={fields.price}
               onChange={(event) => update("price", event.target.value)}
-              placeholder="e.g. 120"
+              placeholder={t("upload.pricePlaceholder")}
             />
           </label>
         </div>
         <label className="field" htmlFor="crop-description">
-          <span>
-            The story of your harvest<small>Optional</small>
-          </span>
+          <span>{t("upload.description")}</span>
           <textarea
             id="crop-description"
             rows={3}
             maxLength={3000}
-            placeholder="Tell buyers about your crop, harvest, or growing practices."
+            placeholder={t("upload.descriptionPlaceholder")}
             value={fields.description}
             onChange={(event) => update("description", event.target.value)}
           />
@@ -767,8 +886,8 @@ export function CropUpload({
         <div className="photo-drop">
           <label htmlFor="crop-photos">
             <Camera size={26} strokeWidth={1.3} />
-            <strong>Let your harvest speak for itself</strong>
-            <small>Add up to 10 photos · JPEG, PNG, or WebP · 10 MB each</small>
+            <strong>{t("upload.photos")}</strong>
+            <small>{t("upload.photosHint")}</small>
             <input
               id="crop-photos"
               type="file"
@@ -808,17 +927,14 @@ export function CropUpload({
         </div>
         <div className="form-note">
           <Leaf size={18} />
-          <p>
-            Your listed price and details will be visible to approved buyers.
-            Photos help the right people find your harvest.
-          </p>
+          <p>{t("upload.subtitle")}</p>
         </div>
         <button className="button full-width" disabled={busy}>
           {busy ? (
-            <Spinner label="Listing your harvest…" />
+            <Spinner label={t("upload.uploading")} />
           ) : (
             <>
-              List my harvest
+              {t("upload.uploadButton")}
               <ArrowUpRight size={17} />
             </>
           )}
@@ -827,26 +943,33 @@ export function CropUpload({
     </Modal>
   );
 }
+
 export function PhoneResult({ result }: { result: CallResult }) {
+  const t = useTranslations("Market");
   const number = result.receiver_phone?.replace(/[^+0-9]/g, "");
   return (
     <div className="phone-result" style={{ marginTop: 20 }}>
-      <p>{result.receiver_name} is available to connect.</p>
+      <p>{t("call.phoneRevealed")} <strong>{result.receiver_name}</strong></p>
       {number ? (
-        <a href={`tel:${number}`}>{result.receiver_phone}</a>
+        <a href={`tel:${number}`} style={{ fontSize: 20, fontWeight: 700, display: "inline-block", margin: "10px 0" }}>
+          {result.receiver_phone}
+        </a>
       ) : (
-        <p>A contact number isn’t recorded for this member.</p>
+        <p>{t("call.availabilityOff")}</p>
       )}
-      <small>Tap the number to call from your device.</small>
     </div>
   );
 }
+
 export function InterestsPanel({ role }: { role: MemberRole }) {
+  const t = useTranslations("Market");
+  const tCommon = useTranslations("Common");
   const fetcher = useCallback(() => getInterests(role), [role]);
   const result = useResource(fetcher);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [phone, setPhone] = useState<CallResult | null>(null);
+
   const call = async (id: string, crop_id: string) => {
     setBusy(id);
     setError("");
@@ -859,6 +982,7 @@ export function InterestsPanel({ role }: { role: MemberRole }) {
       setBusy(null);
     }
   };
+
   return (
     <>
       <section className="panel">
@@ -866,18 +990,18 @@ export function InterestsPanel({ role }: { role: MemberRole }) {
           <div>
             <h2>
               {role === "farmer"
-                ? "People who see the value in your harvest"
-                : "Harvests you’d like to know better"}
+                ? t("interestsPanel.farmerTitle")
+                : t("interestsPanel.buyerTitle")}
             </h2>
             <p>
               {role === "farmer"
-                ? "A little interest can be the start of something good."
-                : "Your connections start with the crops you care about."}
+                ? t("interestsPanel.farmerSubtitle")
+                : t("interestsPanel.buyerSubtitle")}
             </p>
           </div>
           <button
             className="icon-button"
-            aria-label="Refresh interests"
+            aria-label={tCommon("search")}
             onClick={result.reload}
           >
             <RefreshCw size={15} />
@@ -886,15 +1010,19 @@ export function InterestsPanel({ role }: { role: MemberRole }) {
         {(error || result.error) && <Notice>{error || result.error}</Notice>}
         {result.isLoading ? (
           <div className="workspace-loading">
-            <Spinner label="Finding your connections…" />
+            <Spinner label={tCommon("loading")} />
           </div>
         ) : !result.data?.data.length ? (
           <EmptyState
-            title="Good connections take a little time."
+            title={
+              role === "farmer"
+                ? t("interestsPanel.farmerEmptyTitle")
+                : t("interestsPanel.buyerEmptyTitle")
+            }
             description={
               role === "farmer"
-                ? "When a buyer expresses interest in one of your crops, you’ll find their details here."
-                : "Browse the marketplace and share your interest in a harvest. You’ll find it here afterward."
+                ? t("interestsPanel.farmerEmptyDesc")
+                : t("interestsPanel.buyerEmptyDesc")
             }
           >
             {role === "buyer" && (
@@ -902,7 +1030,7 @@ export function InterestsPanel({ role }: { role: MemberRole }) {
                 className="button button-small"
                 href="/dashboard?view=marketplace"
               >
-                Explore harvests
+                {t("crops.buyerTitle")}
                 <ArrowUpRight size={15} />
               </Link>
             )}
@@ -913,7 +1041,9 @@ export function InterestsPanel({ role }: { role: MemberRole }) {
               const person = role === "farmer" ? item.buyer : item.farmer;
               const name =
                 person?.full_name ||
-                (role === "farmer" ? "Interested buyer" : "Farmer");
+                (role === "farmer"
+                  ? t("interestsPanel.buyerCol")
+                  : t("interestsPanel.farmerCol"));
               return (
                 <article
                   className="interest-row"
@@ -928,12 +1058,12 @@ export function InterestsPanel({ role }: { role: MemberRole }) {
                         ·{" "}
                         {item.crop_name ||
                           item.crop?.crop_name ||
-                          "Crop listing"}
+                          t("interestsPanel.cropCol")}
                       </span>
                     </h3>
                     <div
                       className="interest-stars"
-                      aria-label={`${item.rating} out of 5 stars`}
+                      aria-label={`${item.rating} / 5`}
                     >
                       {Array.from({ length: item.rating }, (_, index) => (
                         <Star key={index} />
@@ -958,10 +1088,12 @@ export function InterestsPanel({ role }: { role: MemberRole }) {
                   >
                     <Phone size={13} />
                     {busy === person?.id
-                      ? "Checking…"
+                      ? tCommon("loading")
                       : person?.is_call_available === false
-                        ? "Unavailable"
-                        : "Connect"}
+                        ? tCommon("off")
+                        : role === "farmer"
+                          ? t("crops.callBuyer")
+                          : t("crops.callFarmer")}
                   </button>
                 </article>
               );
@@ -971,7 +1103,7 @@ export function InterestsPanel({ role }: { role: MemberRole }) {
       </section>
       {phone && (
         <Modal
-          title="A good conversation starts here."
+          title={t("call.permitted")}
           onClose={() => setPhone(null)}
         >
           <PhoneResult result={phone} />
@@ -980,7 +1112,10 @@ export function InterestsPanel({ role }: { role: MemberRole }) {
     </>
   );
 }
+
 export function AccountPanel({ user }: { user: UserProfile }) {
+  const t = useTranslations("Market");
+  const tCommon = useTranslations("Common");
   const auth = useAuth();
   const router = useRouter();
   const available = user.is_call_available !== false;
@@ -1000,6 +1135,14 @@ export function AccountPanel({ user }: { user: UserProfile }) {
       setBusy(false);
     }
   };
+
+  const langNames: Record<string, string> = {
+    en: tCommon("english"),
+    hi: tCommon("hindi"),
+    gu: tCommon("gujarati"),
+    mr: tCommon("marathi"),
+  };
+
   return (
     <div className="account-columns">
       <section className="panel">
@@ -1009,39 +1152,41 @@ export function AccountPanel({ user }: { user: UserProfile }) {
             <h2>{user.full_name}</h2>
             <p>
               {user.role === "admin"
-                ? "Platform administrator"
+                ? tCommon("role") + ": " + tCommon("approved")
                 : user.role === "farmer"
-                  ? "Farmer community"
-                  : "Buyer community"}{" "}
-              · <span style={{ color: "#456b31" }}>Approved member</span>
+                  ? t("account.profileSectionTitle")
+                  : t("account.profileSectionTitle")}{" "}
+              · <span style={{ color: "#456b31" }}>{tCommon("approved")}</span>
             </p>
           </div>
         </div>
         <dl className="detail-grid">
           {[
-            ["Email", user.email],
+            [t("account.email"), user.email],
             ...(user.role !== "admin"
               ? [
-                  ["Phone", user.mobile_number],
-                  ["State", user.state],
-                  ["City / village", user.city],
-                  ["Language", user.preferred_language],
-                  ["Nationality", user.nationality],
-                  ["Address", user.full_address],
+                  [t("account.phone"), user.mobile_number],
+                  [tCommon("location"), [user.city, user.state].filter(Boolean).join(", ")],
+                  [
+                    t("account.languagePreference"),
+                    langNames[user.preferred_language || "en"] || user.preferred_language || "en",
+                  ],
+                  [tCommon("role"), user.role],
+                  [t("account.address"), user.full_address],
                 ]
               : []),
             ...(user.role === "farmer"
-              ? [["Farm location", user.land_location]]
+              ? [[t("account.farmLocation"), user.land_location]]
               : []),
           ].map(([key, value]) => (
             <div
               key={key}
               className={
-                key === "Address" || key === "Farm location" ? "full-span" : ""
+                key === t("account.address") || key === t("account.farmLocation") ? "full-span" : ""
               }
             >
               <dt>{key}</dt>
-              <dd>{value || "Not provided"}</dd>
+              <dd>{value || tCommon("notProvided")}</dd>
             </div>
           ))}
         </dl>
@@ -1051,20 +1196,18 @@ export function AccountPanel({ user }: { user: UserProfile }) {
             <div>
               <strong>
                 {available
-                  ? "Open to a conversation"
-                  : "Taking a little quiet time"}
+                  ? t("account.callStatusOn")
+                  : t("account.callStatusOff")}
               </strong>
               <p>
-                {available
-                  ? "Members can request your number when the connection is permitted."
-                  : "Your contact requests are paused. Switch this on when you’re ready to connect."}
+                {t("account.callSectionDesc")}
               </p>
             </div>
             <button
               className={`toggle ${available ? "on" : ""}`}
               role="switch"
               aria-checked={available}
-              aria-label="Available for calls"
+              aria-label={t("account.callSectionTitle")}
               onClick={() => void toggle()}
               disabled={busy}
             >
@@ -1088,20 +1231,22 @@ export function AccountPanel({ user }: { user: UserProfile }) {
     </div>
   );
 }
+
 function ChangePasswordPanel({
   role,
-  required,
   onChanged,
 }: {
   role: UserRole;
-  required: boolean;
+  required?: boolean;
   onChanged: () => Promise<void>;
 }) {
+  const t = useTranslations("Market");
   const [current, setCurrent] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError("");
@@ -1127,19 +1272,16 @@ function ChangePasswordPanel({
       setBusy(false);
     }
   };
+
   return (
     <section className="panel">
       <div className="panel-heading">
         <div>
           <h2>
-            {required
-              ? "First, make this account yours."
-              : "Keep your account growing safely."}
+            {t("account.passwordSectionTitle")}
           </h2>
           <p>
-            {required
-              ? "Replace the temporary password before opening your workspace."
-              : "Choose a new password whenever you need a fresh start."}
+            {t("account.passwordSectionDesc")}
           </p>
         </div>
         <ShieldCheck size={23} strokeWidth={1.3} />
@@ -1148,15 +1290,13 @@ function ChangePasswordPanel({
       <form onSubmit={submit} className="form-stack">
         <PasswordInput
           id="change-current"
-          label={
-            required ? "Temporary password from your email" : "Current password"
-          }
+          label={t("account.currentPassword")}
           value={current}
           onChange={setCurrent}
         />
         <PasswordInput
           id="change-new"
-          label="New password"
+          label={t("account.newPassword")}
           value={password}
           onChange={setPassword}
           autoComplete="new-password"
@@ -1164,24 +1304,24 @@ function ChangePasswordPanel({
         <PasswordRules value={password} />
         <PasswordInput
           id="change-confirm"
-          label="Confirm new password"
+          label={t("account.confirmPassword")}
           value={confirm}
           onChange={setConfirm}
           autoComplete="new-password"
         />
         <button className="button full-width" disabled={busy}>
           {busy ? (
-            <Spinner label="Updating password…" />
+            <Spinner label={t("account.updating")} />
           ) : (
             <>
-              Set my new password
+              {t("account.updatePassword")}
               <ArrowRight size={16} />
             </>
           )}
         </button>
         {role !== "admin" && (
           <Link className="text-link" href={`/forgot-password?role=${role}`}>
-            Forgot your current password?
+            {t("account.passwordSectionTitle")}
             <ArrowUpRight size={13} />
           </Link>
         )}
@@ -1189,7 +1329,10 @@ function ChangePasswordPanel({
     </section>
   );
 }
+
 export function MemberMetrics({ role }: { role: MemberRole }) {
+  const t = useTranslations("Market");
+  const tCommon = useTranslations("Common");
   const fetcher = useCallback(async () => {
     const [crops, interests] = await Promise.all([
       getCrops(role),
@@ -1198,6 +1341,7 @@ export function MemberMetrics({ role }: { role: MemberRole }) {
     return { crops: crops.data, interests: interests.data };
   }, [role]);
   const result = useResource(fetcher);
+
   return (
     <>
       {result.error && <Notice>{result.error}</Notice>}
@@ -1205,22 +1349,33 @@ export function MemberMetrics({ role }: { role: MemberRole }) {
         {[
           {
             label:
-              role === "farmer" ? "Your crop listings" : "Available harvests",
+              role === "farmer"
+                ? t("metrics.farmerHarvests")
+                : t("metrics.buyerHarvests"),
             value: result.data?.crops.length,
             note:
               role === "farmer"
-                ? "Your work, ready to be discovered"
-                : "Discover your next connection",
+                ? t("metrics.farmerHarvestsNote")
+                : t("metrics.buyerHarvestsNote"),
             Icon: Sprout,
           },
           {
-            label: role === "farmer" ? "Buyer interests" : "Your interests",
+            label:
+              role === "farmer"
+                ? t("metrics.farmerBuyers")
+                : t("metrics.buyerInterests"),
             value: result.data?.interests.length,
-            note: "Small beginnings. Real possibilities.",
+            note:
+              role === "farmer"
+                ? t("metrics.farmerBuyersNote")
+                : t("metrics.buyerInterestsNote"),
             Icon: Heart,
           },
           {
-            label: role === "farmer" ? "Available crops" : "Organic harvests",
+            label:
+              role === "farmer"
+                ? t("metrics.farmerLine")
+                : t("metrics.buyerLine"),
             value: result.data?.crops.filter((crop) =>
               role === "farmer"
                 ? crop.status === "available"
@@ -1228,8 +1383,8 @@ export function MemberMetrics({ role }: { role: MemberRole }) {
             ).length,
             note:
               role === "farmer"
-                ? "Ready for their next chapter"
-                : "Growing with nature",
+                ? t("metrics.farmerLineNote", { status: tCommon("on") })
+                : t("metrics.buyerLineNote", { status: tCommon("on") }),
             Icon: Leaf,
           },
         ].map(({ label, value, note, Icon }) => (

@@ -13,14 +13,15 @@ import {
   Phone,
   Settings,
   ShieldCheck,
+  Sparkles,
   Sprout,
   Users,
   X,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/routing";
 import { AvatarMenu } from "./avatar-menu";
 import { useAuth } from "@/lib/auth/context";
-import type { UserRole } from "@/types";
 import {
   AdminMetrics,
   CallActivity,
@@ -34,32 +35,14 @@ import {
   MemberMetrics,
 } from "./market-workspace";
 import { LanguageSwitch } from "./site-header";
+import { NotificationBell } from "./notification-bell";
+import { FarmerAiAgent } from "./farmer-ai-agent";
 import { Brand, FieldLines, Notice, Spinner } from "./ui";
-const navigation = (role: UserRole) => [
-  { id: "overview", label: "Overview", Icon: LayoutDashboard },
-  ...(role === "admin"
-    ? [
-        { id: "requests", label: "Registration inbox", Icon: ClipboardList },
-        { id: "people", label: "Our community", Icon: Users },
-        { id: "crops", label: "Crop listings", Icon: Sprout },
-        { id: "calls", label: "Contact activity", Icon: Phone },
-      ]
-    : [
-        {
-          id: role === "buyer" ? "marketplace" : "crops",
-          label: role === "buyer" ? "The marketplace" : "My harvests",
-          Icon: Sprout,
-        },
-        {
-          id: "interests",
-          label: role === "buyer" ? "My interests" : "Buyer interests",
-          Icon: Heart,
-        },
-      ]),
-  { id: "account", label: "My account", Icon: Settings },
-];
+
 export function Workspace() {
   const { user, isLoading, sessionError, logout, refreshProfile } = useAuth();
+  const t = useTranslations("Workspace");
+  const tCommon = useTranslations("Common");
   const router = useRouter();
   const params = useSearchParams();
   const route = params.toString();
@@ -77,53 +60,93 @@ export function Workspace() {
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
   }, []);
+
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
   }, [open]);
+
   if (isLoading)
     return (
       <main className="workspace-loading" style={{ minHeight: "100vh" }}>
-        <Spinner label="Opening your workspace…" />
+        <Spinner label={t("loading")} />
       </main>
     );
+
   if (!user)
     return (
       <main className="container" style={{ paddingBlock: 40 }}>
         <Brand />
         <section className="panel account-gate">
           <ShieldCheck size={32} strokeWidth={1.2} />
-          <h2 style={{ marginTop: 20 }}>Your community is waiting.</h2>
-          <p>
-            Sign in with the credentials sent to your email after approval. Your
-            harvests, connections, and account will be right here.
-          </p>
+          <h2 style={{ marginTop: 20 }}>{t("unauthenticatedTitle")}</h2>
+          <p>{t("unauthenticatedDesc")}</p>
           {sessionError && <Notice>{sessionError}</Notice>}
           <div className="hero-actions">
             <Link className="button" href="/login">
-              Sign in
+              {t("signIn")}
               <ArrowUpRight size={16} />
             </Link>
             <Link className="button button-outline" href="/register">
-              Join the community
+              {t("joinCommunity")}
             </Link>
           </div>
           <Link className="text-link" style={{ marginTop: 24 }} href="/">
-            Back to home
+            {tCommon("backToHome")}
           </Link>
         </section>
       </main>
     );
-  const nav = navigation(user.role);
+
+  const nav = [
+    { id: "overview", label: t("nav.overview"), Icon: LayoutDashboard },
+    ...(user.role === "admin"
+      ? [
+          { id: "requests", label: t("nav.requests"), Icon: ClipboardList },
+          { id: "people", label: t("nav.people"), Icon: Users },
+          { id: "crops", label: t("nav.crops"), Icon: Sprout },
+          { id: "calls", label: t("nav.calls"), Icon: Phone },
+        ]
+      : [
+          {
+            id: user.role === "buyer" ? "marketplace" : "crops",
+            label:
+              user.role === "buyer"
+                ? t("nav.marketplace")
+                : t("nav.myHarvests"),
+            Icon: Sprout,
+          },
+          {
+            id: "interests",
+            label:
+              user.role === "buyer"
+                ? t("nav.myInterests")
+                : t("nav.interests"),
+            Icon: Heart,
+          },
+          ...(user.role === "farmer"
+            ? [
+                {
+                  id: "ai",
+                  label: t("nav.aiAgent"),
+                  Icon: Sparkles,
+                },
+              ]
+            : []),
+        ]),
+    { id: "account", label: t("nav.account"), Icon: Settings },
+  ];
+
   const requested = params.get("view") || "overview";
   const view = user.must_change_password
     ? "account"
     : nav.some((item) => item.id === requested)
       ? requested
       : "overview";
-  const title = nav.find((item) => item.id === view)?.label || "Overview";
+  const title = nav.find((item) => item.id === view)?.label || t("nav.overview");
+
   const signOut = async () => {
     setSigningOut(true);
     try {
@@ -132,18 +155,20 @@ export function Workspace() {
         user.role === "admin" ? "/admin/login" : `/login?role=${user.role}`,
       );
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Please try again.");
+      setError(error instanceof Error ? error.message : tCommon("error"));
     } finally {
       setSigningOut(false);
     }
   };
-  const greeting = user.full_name?.split(" ")[0] || "there";
+
+  const greeting = user.full_name?.split(" ")[0] || "";
+
   return (
     <div className="workspace">
       {open && (
         <button
           className="sidebar-overlay"
-          aria-label="Close navigation"
+          aria-label={tCommon("close")}
           onClick={() => setOpen(false)}
         />
       )}
@@ -152,10 +177,10 @@ export function Workspace() {
         <div className="sidebar-role">
           <span className="live-dot" />
           {user.role === "admin"
-            ? "COMMUNITY ADMIN"
+            ? t("adminRole")
             : user.role === "farmer"
-              ? "FARMER WORKSPACE"
-              : "BUYER WORKSPACE"}
+              ? t("farmerRole")
+              : t("buyerRole")}
         </div>
         <nav className="sidebar-nav" aria-label="Workspace navigation">
           {nav.map(({ id, label, Icon }) => (
@@ -175,13 +200,11 @@ export function Workspace() {
         <div className="sidebar-bottom">
           <div className="sidebar-note">
             <Leaf size={24} strokeWidth={1.2} />
-            <p>
-              Good things grow
-              <br />
-              when we grow together.
+            <p style={{ whiteSpace: "pre-line" }}>
+              {t("sidebarTagline")}
             </p>
             <Link href="/">
-              Back to our roots
+              {t("backToRoots")}
               <ArrowUpRight size={12} />
             </Link>
           </div>
@@ -191,7 +214,7 @@ export function Workspace() {
             onClick={() => void signOut()}
           >
             <LogOut size={16} />
-            {signingOut ? "Signing out…" : "Sign out"}
+            {signingOut ? t("signingOut") : t("signOut")}
           </button>
         </div>
       </aside>
@@ -200,7 +223,7 @@ export function Workspace() {
           <div className="workspace-breadcrumb">
             <button
               className="workspace-mobile-menu"
-              aria-label={open ? "Close navigation" : "Open navigation"}
+              aria-label={open ? tCommon("close") : tCommon("all")}
               aria-expanded={open}
               onClick={() => setOpen(!open)}
             >
@@ -210,7 +233,8 @@ export function Workspace() {
             <span>/</span>
             <span>{title}</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            {user.role === "farmer" && <NotificationBell />}
             <LanguageSwitch />
             <AvatarMenu />
           </div>
@@ -223,33 +247,32 @@ export function Workspace() {
                 className="text-link"
                 onClick={() => void refreshProfile().catch(() => {})}
               >
-                Try again
+                {tCommon("tryAgain")}
               </button>
             </Notice>
           )}
           <div className="workspace-heading">
             <div>
-              <span className="eyebrow">ROOTED IN POSSIBILITY</span>
+              <span className="eyebrow">{t("eyebrow")}</span>
               <h1>
                 {view === "overview"
-                  ? `A good day to grow, ${greeting}.`
+                  ? t("greeting", { name: greeting || user.full_name })
                   : title}
               </h1>
               <p>
                 {view === "overview"
                   ? user.role === "admin"
-                    ? "A little care today. A stronger community tomorrow."
-                    : "Your harvest. Your connections. Your next chapter."
+                    ? t("subtitles.adminOverview")
+                    : t("subtitles.memberOverview")
                   : view === "account"
-                    ? "A little care for the person behind the profile."
-                    : "Good connections begin with the details."}
+                    ? t("subtitles.account")
+                    : t("subtitles.general")}
               </p>
             </div>
           </div>
           {user.must_change_password && (
             <Notice kind="info">
-              Your account is approved. Set a personal password to open the rest
-              of your workspace.
+              {t("passwordRequiredNotice")}
             </Notice>
           )}
           {view === "overview" && (
@@ -258,22 +281,22 @@ export function Workspace() {
                 <div>
                   <span className="eyebrow">
                     {user.role === "admin"
-                      ? "THE COMMUNITY STARTS WITH YOU"
-                      : "A LITTLE MORE CONNECTION"}
+                      ? t("welcome.adminEyebrow")
+                      : t("welcome.memberEyebrow")}
                   </span>
                   <h2>
                     {user.role === "admin"
-                      ? "Help good connections take root."
+                      ? t("welcome.adminTitle")
                       : user.role === "farmer"
-                        ? "Your hard work deserves to be seen."
-                        : "Find the people behind the produce."}
+                        ? t("welcome.farmerTitle")
+                        : t("welcome.buyerTitle")}
                   </h2>
                   <p>
                     {user.role === "admin"
-                      ? "Review applications, welcome new members, and keep the community growing with care."
+                      ? t("welcome.adminDesc")
                       : user.role === "farmer"
-                        ? "Share what you’ve grown and connect directly with buyers who see its value."
-                        : "Discover real harvests, share your interest, and start a conversation with a farmer."}
+                        ? t("welcome.farmerDesc")
+                        : t("welcome.buyerDesc")}
                   </p>
                 </div>
                 <Link
@@ -281,10 +304,10 @@ export function Workspace() {
                   href={`/dashboard?view=${user.role === "admin" ? "requests" : user.role === "farmer" ? "crops" : "marketplace"}`}
                 >
                   {user.role === "admin"
-                    ? "Review applications"
+                    ? t("welcome.adminAction")
                     : user.role === "farmer"
-                      ? "Manage my harvests"
-                      : "Explore harvests"}
+                      ? t("welcome.farmerAction")
+                      : t("welcome.buyerAction")}
                   <ArrowUpRight size={17} />
                 </Link>
                 <div className="welcome-lines">
@@ -320,11 +343,12 @@ export function Workspace() {
           {view === "interests" && user.role !== "admin" && (
             <InterestsPanel role={user.role} />
           )}
+          {view === "ai" && user.role === "farmer" && <FarmerAiAgent />}
           {view === "account" && <AccountPanel user={user} />}
           <footer className="workspace-footer">
-            <span>SetuMoolya · A more connected harvest.</span>
+            <span>{t("footerText")}</span>
             <Link href="/">
-              Rooted in India. Growing together.
+              {t("footerLink")}
               <ArrowUpRight size={11} />
             </Link>
           </footer>

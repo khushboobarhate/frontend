@@ -15,6 +15,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   approveRequest,
   correctEmail,
@@ -29,6 +30,7 @@ import { formatDate } from "@/lib/utils";
 import type { MemberRole, Pagination, RegistrationStatus } from "@/types";
 import { EmptyState, Modal, Notice, Spinner } from "./ui";
 import { useResource } from "./use-resource";
+
 export function PaginationControls({
   pagination,
   onPage,
@@ -36,24 +38,28 @@ export function PaginationControls({
   pagination: Pagination;
   onPage: (page: number) => void;
 }) {
+  const tCommon = useTranslations("Common");
   return (
     <div className="pagination">
       <span>
-        {pagination.total} {pagination.total === 1 ? "result" : "results"}
+        {tCommon("results", { count: pagination.total })}
       </span>
       <div>
         <button
-          aria-label="Previous page"
+          aria-label={tCommon("previousPage")}
           disabled={pagination.page <= 1}
           onClick={() => onPage(pagination.page - 1)}
         >
           <ChevronLeft size={14} />
         </button>
         <span>
-          Page {pagination.page} of {Math.max(pagination.totalPages, 1)}
+          {tCommon("pageOf", {
+            page: pagination.page,
+            totalPages: Math.max(pagination.totalPages, 1),
+          })}
         </span>
         <button
-          aria-label="Next page"
+          aria-label={tCommon("nextPage")}
           disabled={pagination.page >= pagination.totalPages}
           onClick={() => onPage(pagination.page + 1)}
         >
@@ -63,6 +69,7 @@ export function PaginationControls({
     </div>
   );
 }
+
 export function RequestPanel({
   overview = false,
   onChanged,
@@ -70,6 +77,8 @@ export function RequestPanel({
   overview?: boolean;
   onChanged?: () => void;
 }) {
+  const t = useTranslations("Admin");
+  const tCommon = useTranslations("Common");
   const [status, setStatus] = useState<RegistrationStatus | "all">("pending");
   const [role, setRole] = useState<MemberRole | "">("");
   const [page, setPage] = useState(1);
@@ -87,19 +96,35 @@ export function RequestPanel({
         .toLowerCase()
         .includes(search.toLowerCase()),
     ) || [];
+
+  const statusLabel = (val: RegistrationStatus | "all") => {
+    switch (val) {
+      case "all":
+        return t("requests.allRequests");
+      case "pending":
+        return t("requests.pending");
+      case "approved":
+        return t("requests.approved");
+      case "rejected":
+        return t("requests.rejected");
+    }
+  };
+
   return (
     <>
       <section className="panel">
         <div className="panel-heading">
           <div>
             <h2>
-              {overview ? "Your registration inbox" : "Registration requests"}
+              {overview
+                ? t("requests.overviewTitle")
+                : t("requests.panelTitle")}
             </h2>
-            <p>Every new connection begins with a thoughtful review.</p>
+            <p>{t("requests.subtitle")}</p>
           </div>
           <button
             className="icon-button"
-            aria-label="Refresh registrations"
+            aria-label={t("requests.refreshAria")}
             onClick={result.reload}
             disabled={result.isLoading}
           >
@@ -119,9 +144,7 @@ export function RequestPanel({
                     setPage(1);
                   }}
                 >
-                  {value === "all"
-                    ? "All requests"
-                    : value[0].toUpperCase() + value.slice(1)}
+                  {statusLabel(value)}
                 </button>
               ),
             )}
@@ -129,16 +152,16 @@ export function RequestPanel({
           <label className="search-input">
             <Search />
             <input
-              aria-label="Search this page of requests"
-              placeholder="Search this page…"
+              aria-label={t("requests.searchAria")}
+              placeholder={t("requests.searchPlaceholder")}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
           </label>
           <label className="field">
-            <span className="sr-only">Filter account role</span>
+            <span className="sr-only">{t("requests.allRoles")}</span>
             <select
-              aria-label="Filter account role"
+              aria-label={t("requests.allRoles")}
               value={role}
               onChange={(event) => {
                 setRole(event.target.value as MemberRole | "");
@@ -146,9 +169,9 @@ export function RequestPanel({
               }}
               style={{ padding: "9px 12px", minHeight: 35, fontSize: 14 }}
             >
-              <option value="">All roles</option>
-              <option value="farmer">Farmers</option>
-              <option value="buyer">Buyers</option>
+              <option value="">{t("requests.allRoles")}</option>
+              <option value="farmer">{t("requests.farmers")}</option>
+              <option value="buyer">{t("requests.buyers")}</option>
             </select>
           </label>
         </div>
@@ -156,23 +179,25 @@ export function RequestPanel({
           <Notice>
             {result.error}
             <button onClick={result.reload} className="text-link">
-              Try again
+              {tCommon("tryAgain")}
               <RefreshCw size={13} />
             </button>
           </Notice>
         ) : result.isLoading ? (
           <div className="workspace-loading">
-            <Spinner label="Opening your registration inbox…" />
+            <Spinner label={t("requests.loading")} />
           </div>
         ) : !requests.length ? (
           <EmptyState
             title={
-              search ? "No matching applications" : "A little room to grow."
+              search
+                ? t("requests.noSearchTitle")
+                : t("requests.emptyTitle")
             }
             description={
               search
-                ? "Try another name or email, or clear the filters."
-                : "There are no applications in this view. New registrations will appear here for your review."
+                ? t("requests.noSearchDesc")
+                : t("requests.emptyDesc")
             }
           />
         ) : (
@@ -180,11 +205,11 @@ export function RequestPanel({
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>APPLICANT</th>
-                  <th>ROLE</th>
-                  <th>LOCATION</th>
-                  <th>SUBMITTED</th>
-                  <th>STATUS</th>
+                  <th>{t("requests.applicant")}</th>
+                  <th>{t("requests.role")}</th>
+                  <th>{t("requests.location")}</th>
+                  <th>{t("requests.submitted")}</th>
+                  <th>{t("requests.status")}</th>
                   <th />
                 </tr>
               </thead>
@@ -196,11 +221,17 @@ export function RequestPanel({
                         <Avatar name={item.full_name} photo={item.photo_url} />
                         <div>
                           <strong>{item.full_name}</strong>
-                          <small>{item.email || "Contact email needed"}</small>
+                          <small>
+                            {item.email || t("requests.emailNeeded")}
+                          </small>
                         </div>
                       </div>
                     </td>
-                    <td>{item.role === "farmer" ? "Farmer" : "Buyer"}</td>
+                    <td>
+                      {item.role === "farmer"
+                        ? t("requests.farmers")
+                        : t("requests.buyers")}
+                    </td>
                     <td>
                       {[item.city, item.state].filter(Boolean).join(", ") ||
                         "—"}
@@ -210,7 +241,11 @@ export function RequestPanel({
                     </td>
                     <td>
                       <span className={`badge badge-${item.status}`}>
-                        {item.status}
+                        {item.status === "pending"
+                          ? t("requests.pending")
+                          : item.status === "approved"
+                            ? t("requests.approved")
+                            : t("requests.rejected")}
                       </span>
                     </td>
                     <td>
@@ -218,7 +253,7 @@ export function RequestPanel({
                         className="table-action"
                         onClick={() => setSelected(item.id)}
                       >
-                        Review
+                        {t("requests.review")}
                         <ArrowUpRight />
                       </button>
                     </td>
@@ -239,8 +274,8 @@ export function RequestPanel({
         <RequestDialog
           id={selected}
           onClose={() => setSelected(null)}
-          onUpdated={(message) => {
-            setMessage(message);
+          onUpdated={(msg) => {
+            setMessage(msg);
             result.reload();
             onChanged?.();
           }}
@@ -249,6 +284,7 @@ export function RequestPanel({
     </>
   );
 }
+
 function RequestDialog({
   id,
   onClose,
@@ -258,6 +294,8 @@ function RequestDialog({
   onClose: () => void;
   onUpdated: (message: string) => void;
 }) {
+  const t = useTranslations("Admin");
+  const tCommon = useTranslations("Common");
   const fetcher = useCallback(() => getRequestDetail(id), [id]);
   const result = useResource(fetcher);
   const request = result.data?.data;
@@ -268,6 +306,7 @@ function RequestDialog({
   const [rejecting, setRejecting] = useState(false);
   const [editedEmail, setEmail] = useState<string | null>(null);
   const email = editedEmail ?? request?.email ?? "";
+
   const act = async (kind: "approve" | "reject" | "resend" | "email") => {
     setBusy(true);
     setError("");
@@ -275,53 +314,68 @@ function RequestDialog({
     try {
       if (kind === "email") {
         await correctEmail(id, email.trim());
-        setNotice("Contact email updated.");
-        onUpdated("The applicant’s contact email was updated.");
+        setNotice(t("dialog.emailCorrection.success"));
+        onUpdated(t("dialog.emailCorrection.notification"));
       } else if (kind === "reject") {
         if (!reason.trim())
-          throw new Error(
-            "Add a short reason to help the applicant correct their details.",
-          );
+          throw new Error(t("dialog.rejection.error"));
         const response = await rejectRequest(id, reason.trim());
-        setNotice(response.message || "Application rejected.");
-        onUpdated(response.message || "Application rejected.");
+        const msg = response.message || t("dialog.messages.rejected");
+        setNotice(msg);
+        onUpdated(msg);
         setRejecting(false);
       } else {
         const response = await (kind === "approve"
           ? approveRequest(id)
           : resendCredentials(id));
-        const message = response.data.email_sent
-          ? "Account approved. Temporary credentials were accepted by the email service."
-          : "Account approved, but the email could not be sent. Use Send credentials to try again.";
+        const message =
+          response.message ||
+          (response.data?.email_sent
+            ? t("dialog.messages.approvedWithEmail")
+            : t("dialog.messages.approvedNoEmail"));
         setNotice(message);
         onUpdated(message);
       }
       result.reload();
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Please try again.");
+      setError(
+        error instanceof Error ? error.message : tCommon("error"),
+      );
     } finally {
       setBusy(false);
     }
   };
+
+  const langNames: Record<string, string> = {
+    en: tCommon("english"),
+    hi: tCommon("hindi"),
+    gu: tCommon("gujarati"),
+    mr: tCommon("marathi"),
+  };
+
   const details = request
     ? [
-        ["Email", request.email || "Not provided"],
-        ["Contact number", request.mobile_number],
-        ["Age", request.age || "Not provided"],
-        ["Nationality", request.nationality || "Not provided"],
-        ["State", request.state],
-        ["City / village", request.city],
-        ["Taluka", request.taluka || "Not provided"],
-        ["Language", request.preferred_language || "en"],
-        ["Full address", request.full_address],
+        [t("dialog.labels.email"), request.email || t("dialog.labels.notProvided")],
+        [t("dialog.labels.contactNumber"), request.mobile_number],
+        [t("dialog.labels.age"), request.age || t("dialog.labels.notProvided")],
+        [t("dialog.labels.nationality"), request.nationality || t("dialog.labels.notProvided")],
+        [t("dialog.labels.state"), request.state],
+        [t("dialog.labels.city"), request.city],
+        [t("dialog.labels.taluka"), request.taluka || t("dialog.labels.notProvided")],
+        [
+          t("dialog.labels.language"),
+          langNames[request.preferred_language || "en"] || request.preferred_language || "en",
+        ],
+        [t("dialog.labels.fullAddress"), request.full_address],
         ...(request.role === "farmer"
-          ? [["Farm location", request.land_location]]
+          ? [[t("dialog.labels.farmLocation"), request.land_location]]
           : []),
       ]
     : [];
+
   return (
     <Modal
-      title="A new connection to review"
+      title={t("dialog.title")}
       onClose={() => {
         if (!busy) onClose();
       }}
@@ -340,8 +394,15 @@ function RequestDialog({
               <div>
                 <h3>{request.full_name}</h3>
                 <p>
-                  {request.role === "farmer" ? "Farmer" : "Buyer"} application ·{" "}
-                  {request.created_at ? formatDate(request.created_at) : ""}
+                  {t("dialog.appSubtitle", {
+                    role:
+                      request.role === "farmer"
+                        ? t("requests.farmers")
+                        : t("requests.buyers"),
+                    date: request.created_at
+                      ? formatDate(request.created_at)
+                      : "",
+                  })}
                 </p>
               </div>
             </div>
@@ -354,13 +415,21 @@ function RequestDialog({
               }}
             >
               <span className={`badge badge-${request.status}`}>
-                {request.status}
+                {request.status === "pending"
+                  ? t("requests.pending")
+                  : request.status === "approved"
+                    ? t("requests.approved")
+                    : t("requests.rejected")}
               </span>
               {request.status === "approved" && (
                 <span
                   className={`badge badge-${request.credentials_email_status}`}
                 >
-                  Email {request.credentials_email_status || "pending"}
+                  {t("dialog.emailStatus", {
+                    status:
+                      request.credentials_email_status ||
+                      t("dialog.emailPending"),
+                  })}
                 </span>
               )}
             </div>
@@ -369,7 +438,8 @@ function RequestDialog({
                 <div
                   key={label}
                   className={
-                    label === "Full address" || label === "Farm location"
+                    label === t("dialog.labels.fullAddress") ||
+                    label === t("dialog.labels.farmLocation")
                       ? "full-span"
                       : ""
                   }
@@ -389,8 +459,8 @@ function RequestDialog({
               >
                 <label className="field" htmlFor="correct-email">
                   <span>
-                    Contact email
-                    <small>Correct before approval if needed</small>
+                    {t("dialog.emailCorrection.label")}
+                    <small>{t("dialog.emailCorrection.hint")}</small>
                   </span>
                   <input
                     id="correct-email"
@@ -406,26 +476,30 @@ function RequestDialog({
                     className="button button-outline button-small"
                     disabled={busy}
                   >
-                    Save email correction
+                    {t("dialog.emailCorrection.button")}
                     <Check size={14} />
                   </button>
                 )}
               </form>
             )}
             {request.rejection_reason && (
-              <Notice kind="info">Reason: {request.rejection_reason}</Notice>
+              <Notice kind="info">
+                {t("dialog.rejection.reasonLabel", {
+                  reason: request.rejection_reason,
+                })}
+              </Notice>
             )}
             {rejecting && (
               <div style={{ marginTop: 20 }}>
                 <label className="field" htmlFor="rejection-reason">
-                  <span>What should the applicant correct?</span>
+                  <span>{t("dialog.rejection.question")}</span>
                   <textarea
                     id="rejection-reason"
                     rows={3}
                     maxLength={2000}
                     value={reason}
                     onChange={(event) => setReason(event.target.value)}
-                    placeholder="Please explain which details need attention."
+                    placeholder={t("dialog.rejection.placeholder")}
                   />
                 </label>
               </div>
@@ -444,11 +518,11 @@ function RequestDialog({
                     onClick={() => void act("approve")}
                   >
                     {busy ? (
-                      <Spinner label="Processing…" />
+                      <Spinner label={t("dialog.actions.approving")} />
                     ) : (
                       <>
                         <ShieldCheck size={15} />
-                        Approve & email credentials
+                        {t("dialog.actions.approve")}
                       </>
                     )}
                   </button>
@@ -457,7 +531,7 @@ function RequestDialog({
                     disabled={busy}
                     onClick={() => setRejecting(true)}
                   >
-                    Reject
+                    {t("dialog.actions.reject")}
                     <X size={14} />
                   </button>
                 </>
@@ -470,9 +544,9 @@ function RequestDialog({
                     onClick={() => void act("reject")}
                   >
                     {busy ? (
-                      <Spinner label="Rejecting…" />
+                      <Spinner label={t("dialog.rejection.rejecting")} />
                     ) : (
-                      "Reject with this reason"
+                      t("dialog.rejection.rejectButton")
                     )}
                   </button>
                   <button
@@ -480,7 +554,7 @@ function RequestDialog({
                     disabled={busy}
                     onClick={() => setRejecting(false)}
                   >
-                    Cancel
+                    {t("dialog.rejection.cancel")}
                   </button>
                 </>
               )}
@@ -491,19 +565,18 @@ function RequestDialog({
                   onClick={() => void act("resend")}
                 >
                   {busy ? (
-                    <Spinner label="Sending…" />
+                    <Spinner label={t("dialog.actions.resending")} />
                   ) : (
                     <>
                       <Mail size={16} />
-                      Send new temporary credentials
+                      {t("dialog.actions.resend")}
                     </>
                   )}
                 </button>
               )}
             </div>
             <p className="muted" style={{ marginTop: 15, fontSize: 14 }}>
-              Passwords are sent only to the contact email. If the member has
-              already changed their password, they should use Forgot password.
+              {t("dialog.note")}
             </p>
           </>
         )
@@ -511,7 +584,9 @@ function RequestDialog({
     </Modal>
   );
 }
+
 export function AdminMetrics() {
+  const t = useTranslations("Admin");
   const fetcher = useCallback(async () => {
     const [requests, farmers, buyers] = await Promise.all([
       getRequests({ status: "pending", limit: 1 }),
@@ -531,21 +606,21 @@ export function AdminMetrics() {
       <div className="metric-grid">
         {[
           {
-            label: "Awaiting review",
+            label: t("metrics.awaitingReview"),
             value: result.data?.requests,
-            note: "Farmer & buyer applications",
+            note: t("metrics.awaitingReviewNote"),
             Icon: ClipboardList,
           },
           {
-            label: "Approved farmers",
+            label: t("metrics.approvedFarmers"),
             value: result.data?.farmers,
-            note: "The people behind the harvest",
+            note: t("metrics.approvedFarmersNote"),
             Icon: Sprout,
           },
           {
-            label: "Approved buyers",
+            label: t("metrics.approvedBuyers"),
             value: result.data?.buyers,
-            note: "Connections ready to grow",
+            note: t("metrics.approvedBuyersNote"),
             Icon: Users,
           },
         ].map(({ label, value, note, Icon }) => (
@@ -562,7 +637,9 @@ export function AdminMetrics() {
     </>
   );
 }
+
 export function PeoplePanel() {
+  const t = useTranslations("Admin");
   const [role, setRole] = useState<MemberRole>("farmer");
   const [page, setPage] = useState(1);
   const fetcher = useCallback(() => getUsers(role, page), [role, page]);
@@ -571,12 +648,12 @@ export function PeoplePanel() {
     <section className="panel">
       <div className="panel-heading">
         <div>
-          <h2>The people in your community</h2>
-          <p>Approved farmers and buyers, all in one place.</p>
+          <h2>{t("people.title")}</h2>
+          <p>{t("people.subtitle")}</p>
         </div>
         <button
           className="icon-button"
-          aria-label="Refresh people"
+          aria-label={t("people.refreshAria")}
           onClick={result.reload}
         >
           <RefreshCw size={15} />
@@ -593,7 +670,9 @@ export function PeoplePanel() {
               }}
               key={value}
             >
-              {value === "farmer" ? "Farmers" : "Buyers"}
+              {value === "farmer"
+                ? t("people.farmers")
+                : t("people.buyers")}
             </button>
           ))}
         </div>
@@ -602,12 +681,12 @@ export function PeoplePanel() {
         <Notice>{result.error}</Notice>
       ) : result.isLoading ? (
         <div className="workspace-loading">
-          <Spinner label="Finding your community…" />
+          <Spinner label={t("people.loading")} />
         </div>
       ) : !result.data?.data.users.length ? (
         <EmptyState
-          title="Your community is taking root."
-          description="Approved members will appear here after their applications have been reviewed."
+          title={t("people.emptyTitle")}
+          description={t("people.emptyDesc")}
         />
       ) : (
         <>
@@ -615,11 +694,11 @@ export function PeoplePanel() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>MEMBER</th>
-                  <th>LOCATION</th>
-                  <th>CONTACT</th>
-                  <th>JOINED</th>
-                  <th>STATUS</th>
+                  <th>{t("people.member")}</th>
+                  <th>{t("people.location")}</th>
+                  <th>{t("people.contact")}</th>
+                  <th>{t("people.joined")}</th>
+                  <th>{t("people.status")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -643,7 +722,9 @@ export function PeoplePanel() {
                       {user.created_at ? formatDate(user.created_at) : "—"}
                     </td>
                     <td>
-                      <span className="badge badge-approved">Approved</span>
+                      <span className="badge badge-approved">
+                        {t("people.approved")}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -656,19 +737,35 @@ export function PeoplePanel() {
     </section>
   );
 }
+
 export function CallActivity() {
+  const t = useTranslations("Admin");
   const result = useResource(useCallback(() => getCallLogs(), []));
+
+  const callStatusLabel = (status: string) => {
+    switch (status) {
+      case "permitted":
+        return t("calls.permitted");
+      case "blocked_no_interest":
+        return t("calls.blockedNoInterest");
+      case "blocked_receiver_unavailable":
+        return t("calls.blockedUnavailable");
+      default:
+        return status.replaceAll("_", " ");
+    }
+  };
+
   return (
     <section className="panel">
       <div className="panel-heading">
         <div>
-          <h2>Conversations that can become connections</h2>
-          <p>Contact requests and their availability checks.</p>
+          <h2>{t("calls.title")}</h2>
+          <p>{t("calls.subtitle")}</p>
         </div>
         <button
           className="icon-button"
           onClick={result.reload}
-          aria-label="Refresh call activity"
+          aria-label={t("calls.refreshAria")}
         >
           <RefreshCw size={15} />
         </button>
@@ -679,18 +776,18 @@ export function CallActivity() {
         <Spinner />
       ) : !result.data?.data.length ? (
         <EmptyState
-          title="The conversation starts here."
-          description="Contact activity will appear as members begin connecting."
+          title={t("calls.emptyTitle")}
+          description={t("calls.emptyDesc")}
         />
       ) : (
         <div className="table-scroll">
           <table className="data-table">
             <thead>
               <tr>
-                <th>DATE</th>
-                <th>FROM</th>
-                <th>TO</th>
-                <th>RESULT</th>
+                <th>{t("calls.date")}</th>
+                <th>{t("calls.from")}</th>
+                <th>{t("calls.to")}</th>
+                <th>{t("calls.result")}</th>
               </tr>
             </thead>
             <tbody>
@@ -698,13 +795,17 @@ export function CallActivity() {
                 <tr key={call.id}>
                   <td>{formatDate(call.created_at)}</td>
                   <td>
-                    {call.caller_role}
+                    {call.caller_role === "farmer"
+                      ? t("people.farmers")
+                      : t("people.buyers")}
                     <small style={{ display: "block", marginTop: 5 }}>
                       {call.caller_id.slice(0, 8)}
                     </small>
                   </td>
                   <td>
-                    {call.receiver_role}
+                    {call.receiver_role === "farmer"
+                      ? t("people.farmers")
+                      : t("people.buyers")}
                     <small style={{ display: "block", marginTop: 5 }}>
                       {call.receiver_id.slice(0, 8)}
                     </small>
@@ -713,7 +814,7 @@ export function CallActivity() {
                     <span
                       className={`badge ${call.status === "permitted" ? "badge-approved" : "badge-pending"}`}
                     >
-                      {call.status.replaceAll("_", " ")}
+                      {callStatusLabel(call.status)}
                     </span>
                   </td>
                 </tr>

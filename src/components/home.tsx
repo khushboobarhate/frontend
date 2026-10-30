@@ -15,31 +15,55 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 import { SiteHeader, Footer } from "./site-header";
 import { ArrowLink, Botanical, FieldLines } from "./ui";
-const categories = [
-  {
-    image: "herbs",
-    name: "Herbs & botanicals",
-    note: "Rooted in nature’s goodness",
-    search: "herb",
-    tag: "NATURALLY NOURISHING",
-  },
-  {
-    image: "wheat",
-    name: "Grains & cereals",
-    note: "The heart of every harvest",
-    search: "wheat",
-    tag: "EVERYDAY ESSENTIALS",
-  },
-  {
-    image: "spices",
-    name: "Groundnuts & more",
-    note: "Small harvests. Rich possibilities.",
-    search: "groundnut",
-    tag: "GROWN WITH CHARACTER",
-  },
-];
+
 export function Home() {
   const t = useTranslations("Home");
+
+  const categories = [
+    {
+      image: "herbs",
+      name: t("catHerbs"),
+      note: t("catHerbsNote"),
+      search: "herb",
+      tag: t("catHerbsTag"),
+    },
+    {
+      image: "wheat",
+      name: t("catGrains"),
+      note: t("catGrainsNote"),
+      search: "wheat",
+      tag: t("catGrainsTag"),
+    },
+    {
+      image: "spices",
+      name: t("catSpices"),
+      note: t("catSpicesNote"),
+      search: "groundnut",
+      tag: t("catSpicesTag"),
+    },
+  ];
+
+  const steps = [
+    {
+      icon: Sprout,
+      eyebrow: t("step1Eyebrow"),
+      title: t("step1Title"),
+      text: t("step1Desc"),
+    },
+    {
+      icon: ShieldCheck,
+      eyebrow: t("step2Eyebrow"),
+      title: t("step2Title"),
+      text: t("step2Desc"),
+    },
+    {
+      icon: Handshake,
+      eyebrow: t("step3Eyebrow"),
+      title: t("step3Title"),
+      text: t("step3Desc"),
+    },
+  ];
+
   return (
     <>
       <SiteHeader />
@@ -106,13 +130,12 @@ export function Home() {
               <div className="hero-photo-overlay" />
               <span className="photo-coordinate">
                 <span />
-                TAMIL NADU, INDIA
+                {t("coordinates")}
               </span>
               <div className="hero-photo-caption">
-                <span>THE HANDS BEHIND EVERY HARVEST</span>
-                <p>
-                  A little more connection.
-                  <br />A world of possibility.
+                <span>{t("photoHeading")}</span>
+                <p style={{ whiteSpace: "pre-line" }}>
+                  {t("photoText")}
                 </p>
               </div>
             </div>
@@ -126,7 +149,7 @@ export function Home() {
                 </defs>
                 <text>
                   <textPath href="#seal-path" startOffset="0%">
-                    GROWN WITH CARE · CONNECTED WITH PURPOSE ·{" "}
+                    {t("seal")}
                   </textPath>
                 </text>
               </svg>
@@ -137,67 +160,57 @@ export function Home() {
                 <Leaf size={21} />
               </span>
               <div>
-                <strong>
-                  From our soil.
-                  <br />
-                  For a better tomorrow.
+                <strong style={{ whiteSpace: "pre-line" }}>
+                  {t("heroNoteTitle")}
                 </strong>
-                <span>Every root deserves its worth.</span>
+                <span>{t("heroNoteSub")}</span>
               </div>
               <ArrowUpRight size={21} />
             </div>
           </div>
         </section>
+
         <section className="principles container" aria-label="Our principles">
-          <p>
-            A better way to
-            <br />
-            <strong>grow your connections.</strong>
+          <p style={{ whiteSpace: "pre-line" }}>
+            {t("principlesHeading")}
           </p>
           <div>
             <ShieldCheck />
-            <span>
-              Admin-reviewed
-              <br />
-              <strong>farmer & buyer profiles</strong>
+            <span style={{ whiteSpace: "pre-line" }}>
+              {t("principle1")}
             </span>
           </div>
           <div>
             <Handshake />
-            <span>
-              Direct conversations.
-              <br />
-              <strong>Meaningful connections.</strong>
+            <span style={{ whiteSpace: "pre-line" }}>
+              {t("principle2")}
             </span>
           </div>
           <div>
             <Wheat />
-            <span>
-              From medicinal herbs
-              <br />
-              <strong>to everyday harvests</strong>
+            <span style={{ whiteSpace: "pre-line" }}>
+              {t("principle3")}
             </span>
           </div>
         </section>
+
         <section className="harvest-section section-pad" id="harvests">
           <div className="container">
             <div className="section-heading">
               <div>
-                <span className="eyebrow">A WORLD OF POSSIBILITY</span>
+                <span className="eyebrow">{t("harvestsEyebrow")}</span>
                 <h2>
-                  Goodness, straight
+                  {t("harvestsTitle")}
                   <br />
-                  from the <em>ground.</em>
+                  <em>{t("harvestsTitleAccent")}</em>
                 </h2>
               </div>
               <div className="section-aside">
-                <p>
-                  Explore the possibilities in every harvest.
-                  <br />
-                  Find your next connection in the marketplace.
+                <p style={{ whiteSpace: "pre-line" }}>
+                  {t("harvestsDesc")}
                 </p>
                 <ArrowLink href="/marketplace">
-                  Explore the marketplace
+                  {t("exploreMarketplace")}
                 </ArrowLink>
               </div>
             </div>
@@ -227,45 +240,26 @@ export function Home() {
             </div>
           </div>
         </section>
+
         <section
           className="how-section container section-pad"
           id="how-it-works"
         >
           <div className="section-heading">
             <div>
-              <span className="eyebrow">
-                SIMPLE STEPS. STRONGER CONNECTIONS.
-              </span>
+              <span className="eyebrow">{t("howEyebrow")}</span>
               <h2>
-                Your next chapter
+                {t("howTitle")}
                 <br />
-                starts with a <em>seed.</em>
+                <em>{t("howTitleAccent")}</em>
               </h2>
             </div>
-            <p className="section-aside">
-              Less complexity. More possibility.
-              <br />
-              Here’s how we bring the two sides together.
+            <p className="section-aside" style={{ whiteSpace: "pre-line" }}>
+              {t("howDesc")}
             </p>
           </div>
           <div className="steps-grid">
-            {[
-              {
-                icon: Sprout,
-                title: "Plant your first seed",
-                text: "Register as a farmer or buyer. Share a few details and let our team review your application.",
-              },
-              {
-                icon: ShieldCheck,
-                title: "Grow with confidence",
-                text: "Once approved, your login details arrive by email. Set your password and make yourself at home.",
-              },
-              {
-                icon: Handshake,
-                title: "Connect with possibility",
-                text: "List a harvest or discover one. Express interest, start a conversation, and grow your network.",
-              },
-            ].map((step, index) => (
+            {steps.map((step, index) => (
               <article className="step-card" key={step.title}>
                 <div className="step-top">
                   <span className="step-number">0{index + 1}</span>
@@ -278,12 +272,12 @@ export function Home() {
           </div>
           <div className="how-footer">
             <span>
-              <Check size={17} /> One simple registration. Human review. A real
-              connection.
+              <Check size={17} /> {t("trustDescription")}
             </span>
-            <ArrowLink href="/register">Let’s get you growing</ArrowLink>
+            <ArrowLink href="/register">{t("exploreMarketplace")}</ArrowLink>
           </div>
         </section>
+
         <section className="purpose-section" id="purpose">
           <div className="container purpose-grid">
             <div className="purpose-photo">
@@ -294,60 +288,43 @@ export function Home() {
                 sizes="(max-width: 760px) 100vw, 50vw"
               />
               <div className="photo-label">
-                <Sun size={16} /> GROWN WITH PATIENCE. HARVESTED WITH PRIDE.
+                <Sun size={16} /> {t("seal")}
               </div>
             </div>
             <div className="purpose-copy">
-              <span className="eyebrow">MORE THAN A MARKETPLACE</span>
-              <h2>
-                Behind every crop,
-                <br />
-                there’s a story
-                <br />
-                <em>worth connecting.</em>
-              </h2>
-              <p>
-                The early mornings. The changing seasons. The care that goes
-                into every field. We believe that work deserves to be seen — and
-                connected to opportunity.
-              </p>
-              <p>
-                SetuMoolya brings farmers and buyers closer, with thoughtful
-                introductions and space for direct conversations. Because a
-                better future for agriculture starts with its people.
+              <span className="eyebrow">{t("purposeEyebrow")}</span>
+              <h2>{t("purposeTitle")}</h2>
+              <blockquote style={{ fontSize: "1.1rem", fontStyle: "italic", margin: "16px 0", color: "var(--foreground)" }}>
+                {t("purposeQuote")}
+              </blockquote>
+              <p style={{ fontWeight: 600, color: "var(--color-primary-dark, #2b5329)" }}>
+                — {t("purposeAuthor")}
               </p>
               <ArrowLink href="/register?role=farmer">
-                Be part of the story
+                {t("farmer")}
               </ArrowLink>
               <Botanical className="purpose-botanical" />
             </div>
           </div>
         </section>
+
         <section className="join-section container">
           <div>
-            <span className="eyebrow">LET’S GROW SOMETHING GOOD</span>
-            <h2>
-              Your roots.
-              <br />
-              Our shared <em>future.</em>
-            </h2>
+            <span className="eyebrow">{t("ctaEyebrow")}</span>
+            <h2>{t("ctaTitle")}</h2>
           </div>
           <div>
-            <p>
-              Whether you grow it or source it,
-              <br />
-              there’s a place for you here.
-            </p>
+            <p>{t("ctaDesc")}</p>
             <div className="hero-actions">
               <Link href="/register?role=farmer" className="button">
-                I’m a farmer
+                {t("ctaFarmer")}
                 <ArrowUpRight size={18} />
               </Link>
               <Link
                 href="/register?role=buyer"
                 className="button button-outline"
               >
-                I’m a buyer
+                {t("ctaBuyer")}
                 <ArrowUpRight size={18} />
               </Link>
             </div>

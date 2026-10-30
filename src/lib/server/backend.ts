@@ -27,7 +27,7 @@ export async function backend(path: string, init: RequestInit = {}) {
     ...init,
     headers,
     cache: "no-store",
-    signal: AbortSignal.timeout(25000),
+    signal: AbortSignal.timeout(35000),
     redirect: "error",
   });
 }

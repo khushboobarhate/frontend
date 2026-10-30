@@ -1,11 +1,14 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, LayoutDashboard, LogOut, Settings } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/routing";
 import { useAuth } from "@/lib/auth/context";
 import { Avatar } from "./avatar";
+
 export function AvatarMenu() {
   const { user, logout } = useAuth();
+  const t = useTranslations("Avatar");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -13,6 +16,7 @@ export function AvatarMenu() {
   const wrapper = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const id = useId();
+
   useEffect(() => {
     const outside = (event: PointerEvent) => {
       if (!wrapper.current?.contains(event.target as Node)) setOpen(false);
@@ -30,7 +34,9 @@ export function AvatarMenu() {
       document.removeEventListener("keydown", escape);
     };
   }, [open]);
+
   if (!user) return null;
+
   const signOut = async () => {
     setBusy(true);
     setError("");
@@ -44,12 +50,20 @@ export function AvatarMenu() {
       setError(
         error instanceof Error
           ? error.message
-          : "Could not sign out. Please try again.",
+          : t("error"),
       );
     } finally {
       setBusy(false);
     }
   };
+
+  const roleLabel =
+    user.role === "admin"
+      ? t("admin")
+      : user.role === "farmer"
+        ? t("farmer")
+        : t("buyer");
+
   return (
     <div
       className="avatar-menu"
@@ -62,7 +76,7 @@ export function AvatarMenu() {
       <button
         className="avatar-trigger"
         ref={trigger}
-        aria-label="Open account menu"
+        aria-label={t("openMenu")}
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setOpen(!open)}
@@ -70,13 +84,7 @@ export function AvatarMenu() {
         <Avatar name={user.full_name} photo={user.photo_url} />
         <span className="avatar-trigger-name">
           {user.full_name}
-          <small>
-            {user.role === "admin"
-              ? "Administrator"
-              : user.role === "farmer"
-                ? "Farmer"
-                : "Buyer"}
-          </small>
+          <small>{roleLabel}</small>
         </span>
         <ChevronDown size={16} />
       </button>
@@ -85,7 +93,7 @@ export function AvatarMenu() {
           className="avatar-dropdown"
           id={id}
           role="group"
-          aria-label="Account actions"
+          aria-label={t("openMenu")}
         >
           <div className="avatar-menu-identity">
             <strong>{user.full_name}</strong>
@@ -93,15 +101,15 @@ export function AvatarMenu() {
           </div>
           <Link href="/dashboard" onClick={() => setOpen(false)}>
             <LayoutDashboard size={18} />
-            My workspace
+            {t("workspace")}
           </Link>
           <Link href="/dashboard?view=account" onClick={() => setOpen(false)}>
             <Settings size={18} />
-            My account
+            {t("account")}
           </Link>
           <button onClick={() => void signOut()} disabled={busy}>
             <LogOut size={18} />
-            {busy ? "Signing out…" : "Sign out"}
+            {busy ? t("signingOut") : t("signOut")}
           </button>
           {error && (
             <p className="avatar-menu-error" role="alert">

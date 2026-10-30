@@ -173,6 +173,10 @@ export function createFixtureServer() {
     if (req.headers.authorization !== `Bearer fixture-access-${role}`)
       return send({ success: false, message: "Your session has ended." }, 401);
     if (parts[2] === "profile") {
+      if (req.method === "PATCH" || req.method === "PUT") {
+        if (body?.preferred_language) profiles[role].preferred_language = body.preferred_language;
+        return send({ success: true, message: "Profile updated.", data: profiles[role] });
+      }
       return send({ success: true, data: profiles[role] });
     }
     if (parts[2] === "change-password")

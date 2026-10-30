@@ -4,16 +4,37 @@ import { ArrowUpRight, ChevronDown, Globe2, Menu, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname, useRouter } from "@/i18n/routing";
 import { useAuth } from "@/lib/auth/context";
+import { updateProfile } from "@/lib/api/client";
 import { AvatarMenu } from "./avatar-menu";
 import { Brand } from "./ui";
 import type { Locale } from "@/types";
+
 export function LanguageSwitch() {
   const locale = useLocale();
+  const { user } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
+
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
-  const pathname = usePathname();
-  const router = useRouter();
+
+  const handleLanguageChange = (newLocale: Locale) => {
+    if (newLocale === locale) return;
+    document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000; SameSite=lax`;
+    try {
+      localStorage.setItem("sm_locale", newLocale);
+      sessionStorage.setItem("sm_locale_explicit", newLocale);
+    } catch {}
+    if (user?.role) {
+      updateProfile(user.role, { preferred_language: newLocale }).catch(() => {});
+    }
+    router.replace(
+      `${pathname}${window.location.search}${window.location.hash}`,
+      { locale: newLocale },
+    );
+  };
+
   return (
     <label className="language-switch">
       <Globe2 size={16} />
@@ -21,21 +42,18 @@ export function LanguageSwitch() {
       <select
         aria-label="Language"
         value={locale}
-        onChange={(event) =>
-          router.replace(
-            `${pathname}${window.location.search}${window.location.hash}`,
-            { locale: event.target.value as Locale },
-          )
-        }
+        onChange={(event) => handleLanguageChange(event.target.value as Locale)}
       >
         <option value="en">EN</option>
         <option value="hi">हिंदी</option>
         <option value="gu">ગુજરાતી</option>
+        <option value="mr">मराठी</option>
       </select>
       <ChevronDown size={12} />
     </label>
   );
 }
+
 export function SiteHeader({ simple = false }: { simple?: boolean }) {
   const t = useTranslations("Nav");
   const { user } = useAuth();
@@ -45,7 +63,7 @@ export function SiteHeader({ simple = false }: { simple?: boolean }) {
       <div className="announcement">
         <span className="tiny-sun">✳</span>
         {t("announcement")}
-        <span className="announcement-hindi">जड़ों से जुड़ें, साथ बढ़ें।</span>
+        <span className="announcement-hindi">{t("announcementSub")}</span>
       </div>
       <header className="site-header container">
         <Brand />
@@ -84,7 +102,7 @@ export function SiteHeader({ simple = false }: { simple?: boolean }) {
             ))}
           <button
             className="icon-button mobile-menu"
-            aria-label={open ? "Close navigation" : "Open navigation"}
+            aria-label={open ? t("closeMenu") : t("openMenu")}
             aria-expanded={open}
             onClick={() => setOpen(!open)}
           >
@@ -95,6 +113,7 @@ export function SiteHeader({ simple = false }: { simple?: boolean }) {
     </>
   );
 }
+
 export function Footer() {
   const t = useTranslations("Nav");
   return (
@@ -102,43 +121,38 @@ export function Footer() {
       <div className="container footer-top">
         <div>
           <Brand light />
-          <p>
-            Good things grow when
-            <br />
-            we grow together.
+          <p style={{ whiteSpace: "pre-line" }}>
+            {t("footerTagline")}
           </p>
         </div>
         <div className="footer-links">
-          <span>THE COMMUNITY</span>
-          <Link href="/register?role=farmer">For farmers</Link>
-          <Link href="/register?role=buyer">For buyers</Link>
+          <span>{t("community")}</span>
+          <Link href="/register?role=farmer">{t("forFarmers")}</Link>
+          <Link href="/register?role=buyer">{t("forBuyers")}</Link>
         </div>
         <div className="footer-links">
-          <span>EXPLORE</span>
+          <span>{t("explore")}</span>
           <Link href="/marketplace">{t("marketplace")}</Link>
           <Link href="/#how-it-works">{t("how")}</Link>
           <Link href="/#purpose">{t("purpose")}</Link>
         </div>
         <div className="footer-note">
           <span className="eyebrow">सेतुमूल्य</span>
-          <p>
-            A bridge from your roots
-            <br />
-            to new possibilities.
+          <p style={{ whiteSpace: "pre-line" }}>
+            {t("footerBridge")}
           </p>
           <div className="footer-dot">
             <span />
-            Rooted in India.
+            {t("rootedInIndia")}
           </div>
         </div>
       </div>
       <div className="container footer-bottom">
         <span>
-          © {new Date().getFullYear()} SetuMoolya. Made for a more connected
-          harvest.
+          {t("copyright", { year: new Date().getFullYear() })}
         </span>
         <Link href="/credits">
-          Photography credits <ArrowUpRight size={12} />
+          {t("photographyCredits")} <ArrowUpRight size={12} />
         </Link>
       </div>
     </footer>

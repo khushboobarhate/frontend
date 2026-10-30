@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Footer, SiteHeader } from "@/components/site-header";
 const photographs = [
   [
@@ -32,15 +33,15 @@ const photographs = [
   ],
 ];
 export default function CreditsPage() {
+  const t = useTranslations("Credits");
   return (
     <>
       <SiteHeader />
       <main className="container credits-page" id="main-content">
-        <span className="eyebrow">THE PEOPLE BEHIND THE PICTURES</span>
-        <h1>A little gratitude.</h1>
+        <span className="eyebrow">{t("eyebrow")}</span>
+        <h1>{t("title")}</h1>
         <p>
-          The photographs that bring our story to life are by the following
-          creators on Unsplash. They are used under the{" "}
+          {t("description")}{" "}
           <a
             href="https://unsplash.com/license"
             target="_blank"
@@ -49,24 +50,22 @@ export default function CreditsPage() {
           >
             Unsplash License
           </a>
-          . These editorial images illustrate farming and produce; they do not
-          represent registered members, available listings, or endorsements.
+          .
         </p>
         <ul>
           {photographs.map(([subject, creator, source]) => (
             <li key={source}>
               <strong>{subject}</strong>
               <br />
-              Photography by {creator}
+              {t("by", { creator })}
               <a href={source} target="_blank" rel="noreferrer">
-                View the original photograph ↗
+                {t("viewOriginal")}
               </a>
             </li>
           ))}
         </ul>
         <p style={{ marginTop: 30 }}>
-          The bridge, botanical drawings, and field illustrations were created
-          for this interface as scalable SVG artwork.
+          {t("illustrationNote")}
         </p>
       </main>
       <Footer />
