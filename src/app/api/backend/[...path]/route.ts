@@ -166,7 +166,11 @@ async function proxy(
     });
     if (response.headers.has("retry-after"))
       result.headers.set("Retry-After", response.headers.get("retry-after")!);
-    if (response.status === 401) clearSession(result);
+    if (
+      response.status === 401 ||
+      (response.status === 403 && json?.code === "ACCOUNT_REVOKED")
+    )
+      clearSession(result);
     if (response.ok && path[2] === "change-password") clearSession(result);
     return result;
   } catch {

@@ -13,6 +13,7 @@ import {
   Leaf,
   LockKeyhole,
   Mail,
+  ShieldAlert,
   ShieldCheck,
   ShoppingBasket,
   Sprout,
@@ -22,6 +23,7 @@ import { Link, useRouter, type Locale } from "@/i18n/routing";
 import { useTranslations, useLocale } from "next-intl";
 import { useAuth } from "@/lib/auth/context";
 import {
+  ApiRequestError,
   forgotPassword,
   registerAccount,
   resetPassword,
@@ -105,7 +107,8 @@ export function AuthShell({
         <div className="auth-form-container">{children}</div>
         <footer className="auth-bottom">
           <ShieldCheck size={15} />
-          {t("story.footer")}<span>सेतुमूल्य</span>
+          {t("story.footer")}
+          <span>सेतुमूल्य</span>
         </footer>
       </section>
     </main>
@@ -229,6 +232,7 @@ export function LoginForm({ adminMode = false }: { adminMode?: boolean }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [revocationReason, setRevocationReason] = useState<string | null>(null);
   useEffect(() => {
     if (auth.user) router.replace("/dashboard");
   }, [auth.user, router]);
@@ -236,18 +240,23 @@ export function LoginForm({ adminMode = false }: { adminMode?: boolean }) {
     event.preventDefault();
     setBusy(true);
     setError("");
+    setRevocationReason(null);
     try {
-      if (!validEmail(email.trim()))
-        throw new Error(t("validEmailError"));
+      if (!validEmail(email.trim())) throw new Error(t("validEmailError"));
       const user = await auth.login(role, { email: email.trim(), password });
       let targetLocale = locale as Locale;
       let explicit: string | null = null;
       try {
         explicit = sessionStorage.getItem("sm_locale_explicit");
       } catch {}
-      if (explicit && (explicit === "en" || explicit === "hi" || explicit === "gu")) {
+      if (
+        explicit &&
+        (explicit === "en" || explicit === "hi" || explicit === "gu")
+      ) {
         targetLocale = explicit as Locale;
-        updateProfile(role, { preferred_language: targetLocale }).catch(() => {});
+        updateProfile(role, { preferred_language: targetLocale }).catch(
+          () => {},
+        );
         try {
           sessionStorage.removeItem("sm_locale_explicit");
         } catch {}
@@ -259,7 +268,9 @@ export function LoginForm({ adminMode = false }: { adminMode?: boolean }) {
       ) {
         targetLocale = user.preferred_language as Locale;
       } else if (targetLocale) {
-        updateProfile(role, { preferred_language: targetLocale }).catch(() => {});
+        updateProfile(role, { preferred_language: targetLocale }).catch(
+          () => {},
+        );
       }
       document.cookie = `NEXT_LOCALE=${targetLocale}; path=/; max-age=31536000; SameSite=lax`;
       try {
@@ -270,7 +281,14 @@ export function LoginForm({ adminMode = false }: { adminMode?: boolean }) {
         { locale: targetLocale },
       );
     } catch (error) {
-      setError(errorText(error));
+      if (
+        error instanceof ApiRequestError &&
+        (error.code === "ACCOUNT_REVOKED" || error.revocationReason)
+      ) {
+        setRevocationReason(error.revocationReason || error.message);
+      } else {
+        setError(errorText(error));
+      }
     } finally {
       setBusy(false);
     }
@@ -286,14 +304,100 @@ export function LoginForm({ adminMode = false }: { adminMode?: boolean }) {
           onChange={(value) => {
             setRole(value as MemberRole);
             setError("");
+            setRevocationReason(null);
           }}
         />
       )}
+      {revocationReason && (
+        <div
+          role="alert"
+          style={{
+            border: "1.5px solid #dc2626",
+            backgroundColor: "#fff1f2",
+            borderRadius: "12px",
+            padding: "20px",
+            margin: "18px 0",
+            boxShadow: "0 4px 12px rgba(220, 38, 38, 0.08)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              marginBottom: "8px",
+            }}
+          >
+            <ShieldAlert size={22} color="#dc2626" />
+            <strong
+              style={{
+                fontSize: "16px",
+                fontWeight: "700",
+                color: "#991b1b",
+              }}
+            >
+              {t("revocation.title")}
+            </strong>
+          </div>
+          <p
+            style={{
+              margin: "6px 0 14px 0",
+              fontSize: "14px",
+              lineHeight: "1.5",
+              color: "#7f1d1d",
+            }}
+          >
+            {t("revocation.message")}
+          </p>
+          <div
+            style={{
+              backgroundColor: "#ffffff",
+              border: "1px solid #fecaca",
+              borderRadius: "8px",
+              padding: "12px 14px",
+              marginBottom: "14px",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "12px",
+                fontWeight: "700",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                color: "#991b1b",
+                display: "block",
+                marginBottom: "4px",
+              }}
+            >
+              {t("revocation.reasonLabel")}
+            </span>
+            <p
+              style={{
+                margin: 0,
+                fontSize: "14px",
+                fontWeight: "600",
+                color: "#b91c1c",
+                wordBreak: "break-word",
+              }}
+            >
+              {revocationReason}
+            </p>
+          </div>
+          <p
+            style={{
+              margin: 0,
+              fontSize: "13px",
+              color: "#991b1b",
+              lineHeight: "1.4",
+            }}
+          >
+            {t("revocation.contact")}
+          </p>
+        </div>
+      )}
       {error && <Notice>{error}</Notice>}
       {params.get("password") === "updated" && (
-        <Notice kind="success">
-          {t("passwordUpdated")}
-        </Notice>
+        <Notice kind="success">{t("passwordUpdated")}</Notice>
       )}
       <form onSubmit={submit} className="form-stack">
         <label className="field" htmlFor="login-email">
@@ -336,11 +440,7 @@ export function LoginForm({ adminMode = false }: { adminMode?: boolean }) {
       </form>
       <div className="form-note">
         <ShieldCheck size={17} />
-        <p>
-          {role === "admin"
-            ? t("adminNote")
-            : t("memberNote")}
-        </p>
+        <p>{role === "admin" ? t("adminNote") : t("memberNote")}</p>
       </div>
       {!adminMode && (
         <p className="form-switch">
@@ -381,6 +481,7 @@ export function RegisterForm() {
   const [preview, setPreview] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
   const [submitted, setSubmitted] = useState<{
     request_id: string;
     email: string;
@@ -485,9 +586,7 @@ export function RegisterForm() {
             <Mail size={21} />
             <div>
               <strong>{t("successInboxTitle")}</strong>
-              <p>
-                {t("successInboxDesc", { email: submitted.email })}
-              </p>
+              <p>{t("successInboxDesc", { email: submitted.email })}</p>
             </div>
           </div>
           <div className="reference">
@@ -498,9 +597,7 @@ export function RegisterForm() {
             {t("backToSignIn")}
             <ArrowRight size={18} />
           </Link>
-          <p className="muted">
-            {t("successCloseNote")}
-          </p>
+          <p className="muted">{t("successCloseNote")}</p>
         </div>
       ) : (
         <>
@@ -544,7 +641,9 @@ export function RegisterForm() {
                   autoComplete: "tel",
                 })}
                 <div className="form-grid">
-                  {field("age", t("age"), t("agePlaceholder"), { type: "number" })}
+                  {field("age", t("age"), t("agePlaceholder"), {
+                    type: "number",
+                  })}
                   <label className="field" htmlFor="register-language">
                     <span>{t("language")}</span>
                     <select
@@ -581,7 +680,11 @@ export function RegisterForm() {
                     autoComplete: "address-level2",
                   })}
                   {field("taluka", t("taluka"), t("talukaPlaceholder"))}
-                  {field("nationality", t("nationality"), t("nationalityPlaceholder"))}
+                  {field(
+                    "nationality",
+                    t("nationality"),
+                    t("nationalityPlaceholder"),
+                  )}
                 </div>
                 <label className="field" htmlFor="register-address">
                   <span>{t("address")}</span>
@@ -600,12 +703,9 @@ export function RegisterForm() {
                   />
                 </label>
                 {role === "farmer" &&
-                  field(
-                    "land_location",
-                    t("land"),
-                    t("landPlaceholder"),
-                    { required: true },
-                  )}
+                  field("land_location", t("land"), t("landPlaceholder"), {
+                    required: true,
+                  })}
                 <label className="photo-upload" htmlFor="register-photo">
                   <input
                     id="register-photo"
@@ -698,6 +798,7 @@ export function ForgotForm() {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
   const [sent, setSent] = useState(false);
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -717,9 +818,7 @@ export function ForgotForm() {
       <span className="eyebrow">{t("forgotEyebrow")}</span>
       <h1>{sent ? t("checkInbox") : t("freshStart")}</h1>
       <p className="form-subtitle">
-        {sent
-          ? t("checkInboxDesc")
-          : t("forgotPasswordDesc")}
+        {sent ? t("checkInboxDesc") : t("forgotPasswordDesc")}
       </p>
       {error && <Notice>{error}</Notice>}
       {!sent && (
@@ -773,6 +872,7 @@ export function ResetForm() {
   const [confirmation, setConfirmation] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
   const router = useRouter();
   /* eslint-disable react-hooks/set-state-in-effect -- Consume browser-only recovery state after hydration, then remove the secret from history. */
   useEffect(() => {
@@ -816,17 +916,13 @@ export function ResetForm() {
     <AuthShell hideLanguage>
       <span className="eyebrow">{t("resetEyebrow")}</span>
       <h1>{t("resetTitle")}</h1>
-      <p className="form-subtitle">
-        {t("resetSubtitle")}
-      </p>
+      <p className="form-subtitle">{t("resetSubtitle")}</p>
       {error && <Notice>{error}</Notice>}
       {!checked ? (
         <Spinner />
       ) : !token ? (
         <>
-          <Notice kind="info">
-            {t("linkMissing")}
-          </Notice>
+          <Notice kind="info">{t("linkMissing")}</Notice>
           <Link href="/forgot-password" className="button full-width">
             {t("requestNewLink")}
             <ArrowRight size={17} />

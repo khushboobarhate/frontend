@@ -17,6 +17,7 @@ import type {
   RegionalComparisonItem,
   RegistrationRequest,
   RegistrationStatus,
+  RevokedAccount,
   UserProfile,
   UserRole,
 } from "@/types";
@@ -26,6 +27,7 @@ export class ApiRequestError extends Error {
     message: string,
     public status: number,
     public code?: string,
+    public revocationReason?: string,
   ) {
     super(message);
     this.name = "ApiRequestError";
@@ -54,7 +56,8 @@ export async function request<T>(
   }));
   if (!response.ok) {
     if (
-      response.status === 401 &&
+      (response.status === 401 ||
+        (response.status === 403 && data.code === "ACCOUNT_REVOKED")) &&
       !endpoint.endsWith("/login") &&
       typeof window !== "undefined"
     )
@@ -63,6 +66,7 @@ export async function request<T>(
       data.message || "Please try again.",
       response.status,
       data.code,
+      data.revocation_reason,
     );
   }
   return data;
@@ -161,7 +165,11 @@ export const correctEmail = (id: string, email: string) =>
     { method: "PATCH", body: JSON.stringify({ email }) },
   );
 
-export const getUsers = (role: MemberRole, page = 1) =>
+export const getUsers = (
+  role: MemberRole,
+  page = 1,
+  status: "approved" | "revoked" | "all" = "approved",
+) =>
   request<
     ApiResponse<{
       users: UserProfile[];
@@ -169,7 +177,33 @@ export const getUsers = (role: MemberRole, page = 1) =>
       page: number;
       totalPages: number;
     }>
-  >(`/api/admin/users?${query({ role, page, limit: 20 })}`);
+  >(`/api/admin/users?${query({ role, page, status, limit: 20 })}`);
+
+export const revokeUserAccess = (userId: string, reason: string) =>
+  request<
+    ApiResponse<{
+      user_id: string;
+      full_name: string;
+      email: string;
+      role: string;
+      status: string;
+      revocation_reason: string;
+      revoked_at: string;
+    }>
+  >(`/api/admin/users/${encodeURIComponent(userId)}/revoke`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+
+export const getRevokedUsers = (role?: MemberRole, page = 1) =>
+  request<
+    ApiResponse<{
+      revoked_users: RevokedAccount[];
+      total: number;
+      page: number;
+      totalPages: number;
+    }>
+  >(`/api/admin/revoked-users?${query({ role, page, limit: 20 })}`);
 
 export const getCrops = (
   role: UserRole,
@@ -258,9 +292,12 @@ export const getFarmerCallRequests = (status?: string) =>
   );
 
 export const approveCallRequest = (id: string) =>
-  request<ApiResponse<CallRequest>>(`/api/farmer/calls/requests/${id}/approve`, {
-    method: "POST",
-  });
+  request<ApiResponse<CallRequest>>(
+    `/api/farmer/calls/requests/${id}/approve`,
+    {
+      method: "POST",
+    },
+  );
 
 export const rejectCallRequest = (id: string, rejection_reason?: string) =>
   request<ApiResponse<CallRequest>>(`/api/farmer/calls/requests/${id}/reject`, {
@@ -305,7 +342,12 @@ export const transcribeVoiceRecording = (formData: FormData) =>
   );
 
 export const getMarketIntelligence = (crop = "wheat", state?: string) =>
-  request<ApiResponse<{ crop: MarketDataCrop; regionalComparison: RegionalComparisonItem[] }>>(
+  request<
+    ApiResponse<{
+      crop: MarketDataCrop;
+      regionalComparison: RegionalComparisonItem[];
+    }>
+  >(
     `/api/farmer/ai/market-intelligence?${new URLSearchParams({
       crop,
       ...(state ? { state } : {}),

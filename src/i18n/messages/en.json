@@ -238,6 +238,12 @@
       "p2": "For the people who believe in their harvest.",
       "badge": "Every root deserves its worth.",
       "footer": "Thoughtful connections. Human-reviewed accounts."
+    },
+    "revocation": {
+      "title": "Account Access Revoked",
+      "message": "Your Setu Moolya account access has been revoked by the administration.",
+      "reasonLabel": "Reason:",
+      "contact": "If you believe this decision was made incorrectly, please contact Setu Moolya administration."
     }
   },
   "Workspace": {
@@ -389,7 +395,42 @@
       "contact": "CONTACT",
       "joined": "JOINED",
       "status": "STATUS",
-      "approved": "Approved"
+      "approved": "Approved",
+      "allRoles": "All roles",
+      "activeTab": "Active Approved Members",
+      "revokedTab": "Revoked / Deleted Accounts",
+      "revokeButton": "Revoke Access / Delete Account",
+      "revoked": "Revoked / Deleted",
+      "removalDate": "REMOVAL DATE",
+      "removalReason": "REMOVAL REASON",
+      "revokedBy": "REVOKED BY",
+      "emptyRevokedTitle": "No revoked accounts",
+      "emptyRevokedDesc": "Accounts that have been revoked or deleted by administrators will appear here.",
+      "revocationModal": {
+        "title": "Revoke Access / Delete Account",
+        "subtitle": "Revoke access and remove this approved user account.",
+        "warning": "This action immediately terminates active sessions, blocks website and API access, and archives active listings.",
+        "name": "User name",
+        "userType": "User type",
+        "mobile": "Registered mobile number",
+        "email": "Registered email",
+        "reasonHeading": "Mandatory Reason for Account Removal",
+        "reasonSelectLabel": "Select a primary reason",
+        "reasons": {
+          "fake": "Fake User",
+          "fraud": "Fraudulent Activity",
+          "incorrect": "Incorrect Information",
+          "suspicious": "Suspicious Account",
+          "violation": "Violation of Platform Policies",
+          "other": "Other (custom description)"
+        },
+        "customDetailsLabel": "Specific details or custom description",
+        "customPlaceholder": "Enter specific details or explanation for removal…",
+        "confirm": "Confirm Revoke & Delete",
+        "confirming": "Revoking Access…",
+        "cancel": "Cancel",
+        "errorRequired": "A mandatory reason for account removal must be provided."
+      }
     },
     "calls": {
       "title": "Conversations that can become connections",

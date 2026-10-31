@@ -19,6 +19,10 @@ export interface UserProfile {
   preferred_language?: string | null;
   photo_url?: string | null;
   is_approved: boolean;
+  is_revoked?: boolean;
+  revocation_reason?: string | null;
+  revoked_at?: string | null;
+  revoked_by?: string | null;
   is_call_available?: boolean;
   must_change_password?: boolean;
   registration_request_id?: string | null;
@@ -78,6 +82,23 @@ export interface ApprovalResult {
   email_sent: boolean;
   credentials_email_status?: "pending" | "sent" | "failed";
   can_resend_credentials?: boolean;
+}
+
+export interface RevokedAccount {
+  id: string;
+  user_id: string;
+  role: UserRole;
+  full_name: string;
+  email: string;
+  mobile_number?: string | null;
+  reason: string;
+  revoked_by?: string | null;
+  revoked_at: string;
+  metadata?: {
+    city?: string | null;
+    state?: string | null;
+    admin_email?: string | null;
+  };
 }
 
 export interface PersonSummary {
@@ -147,7 +168,8 @@ export interface CallResult {
 // Call Request & Approval System Types
 // ================================================================
 
-export type CallRequestStatus = "pending" | "approved" | "rejected" | "cancelled" | "expired";
+export type CallRequestStatus =
+  "pending" | "approved" | "rejected" | "cancelled" | "expired";
 
 export interface CallRequest {
   id: string;
@@ -221,7 +243,15 @@ export interface MarketDataCrop {
   unit: string;
   applications: string[];
   buyers: { name: string; type: string; location: string; verified: boolean }[];
-  markets: { market: string; state: string; minPrice: number; maxPrice: number; avgPrice: number; demand: string; opportunity: string }[];
+  markets: {
+    market: string;
+    state: string;
+    minPrice: number;
+    maxPrice: number;
+    avgPrice: number;
+    demand: string;
+    opportunity: string;
+  }[];
   lastUpdated?: string;
   dataSource?: string;
   disclaimer?: string;
